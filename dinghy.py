@@ -7,6 +7,14 @@ from progress.bar import Bar
 class Keeper:
 
     def __init__(self, show_progress):
+        # Refuse to do anything if RunDeck is running
+        # This is best practice according to the docs:
+        # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
+        if self._rundeck_is_running():
+            logging.error("rundeckd cannot be running while you take a backup"
+                          " or restore from backup")
+            raise Exception("rundeckd is still running")
+
         self.count = 0
         self.bar = None
         self.show_progress = show_progress
@@ -86,12 +94,6 @@ class Keeper:
         return
 
 def main(arguments):
-    # Refuse to do anything if RunDeck is running
-    # This is best practice according to the docs:
-    # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
-    if self._rundeck_is_running():
-        logging.error("rundeckd cannot be running while you take a backup")
-        raise Exception("rundeckd is still running")
     # Gather arguments
     parser_name = arguments.subparser_name
     debug_mode = arguments.debug
@@ -143,7 +145,7 @@ if __name__ == "__main__":
                             datetime.now().strftime('%Y-%M-%d--%H-%m-%S')))
 
     # Restore options
-    restore_parsers = subparsers.add_parser('restore',
+    restore_parser = subparsers.add_parser('restore',
                                             help='restore from a backup file')
     restore_parser.add_argument('--file',
                                 type=str,
