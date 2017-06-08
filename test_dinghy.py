@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import unittest, os, zipfile, logging, shutil
+import unittest
+import os
+import zipfile
+import shutil
 from dinghy import Dinghy
 
 
