@@ -4,7 +4,7 @@ import argparse, subprocess, os, logging, zipfile
 from datetime import datetime
 from progress.bar import Bar
 
-class Keeper:
+class Dinghy:
 
     def __init__(self, show_progress):
         # Refuse to do anything if RunDeck is running
@@ -110,14 +110,14 @@ def main(arguments):
     # Set up logging
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',level=log_level)
 
-    keeper = Keeper(show_progress=show_progress)
+    dinghy = Dinghy(show_progress=show_progress)
 
     if parser_name == "backup":
         # Run backup
-        keeper.backup(destination_path=arguments.dest,
+        dinghy.backup(destination_path=arguments.dest,
                       filename=arguments.filename)
     elif parser_name == "restore":
-        keeper.restore(filename=arguments.file)
+        dinghy.restore(filename=arguments.file)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='dinghy: helper for backup and restore of RunDeck')
