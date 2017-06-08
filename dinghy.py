@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
-import argparse, subprocess, os, logging, zipfile
+import argparse
+import subprocess
+import os
+import logging
+import zipfile
 from datetime import datetime
 from progress.bar import Bar
+
 
 class Dinghy:
 
@@ -51,14 +56,14 @@ class Dinghy:
                 logging.debug("file: {}".format(f))
                 zip_handle.write(os.path.join(root, f))
 
-
     def backup(self, destination_path, filename):
         # Start message
         logging.debug("starting backup")
 
         # Fail if backup dir is not found
         if not os.path.exists(destination_path):
-            logging.error("backup directory {} not found".format(destination_path))
+            logging.error("backup directory {} not found".format(
+                destination_path))
             raise Exception("could not find backup directory")
 
         file_path = os.path.join(destination_path, filename)
@@ -81,8 +86,9 @@ class Dinghy:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 self._add_directory_to_zip(zip_file, directory)
-                print("") # To get the progress bar on separate line from
-                          # log messages when printing log to stdout
+                # To get the progress bar on separate line from
+                # log messages when printing log to stdout
+                print("")
 
         if self.show_progress:
             # Close progress bar
@@ -90,6 +96,7 @@ class Dinghy:
 
     def restore(self, filename):
         return
+
 
 def main(arguments):
     # Gather arguments
@@ -106,7 +113,9 @@ def main(arguments):
     else:
         log_level = logging.INFO
     # Set up logging
-    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',level=log_level)
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)s %(message)s',
+        level=log_level)
 
     # Set backup directories
     if arguments.dirs:
@@ -139,39 +148,49 @@ def main(arguments):
     elif parser_name == "restore":
         dinghy.restore(filename=arguments.file)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='dinghy: helper for backup and restore of RunDeck')
-    parser.add_argument('--debug',
-                        '-d',
-                        action='store_true',
-                        help='enable debug logging')
-    parser.add_argument('--no-progress',
-                        action='store_true',
-                        help='disable progress bar')
-    parser.add_argument('--dirs',
-                        type=str,
-                        nargs="*",
-                        help='comma-separated list that overrides the default list of system directories to backup/restore')
+    parser = argparse.ArgumentParser(
+        description='dinghy: helper for backup and restore of RunDeck')
+    parser.add_argument(
+        '--debug',
+        '-d',
+        action='store_true',
+        help='enable debug logging')
+    parser.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='disable progress bar')
+    parser.add_argument(
+        '--dirs',
+        type=str,
+        nargs="*",
+        help='comma-separated list that overrides the default list of system'
+             'directories to backup/restore')
 
     subparsers = parser.add_subparsers(help='command help',
                                        dest='subparser_name')
 
     # Backup options
     backup_parser = subparsers.add_parser('backup', help='create a backup')
-    backup_parser.add_argument('--dest',
-                                type=str,
-                                required=True,
-                                help='path to write backup file to')
-    backup_parser.add_argument('--filename',
-                                type=str,
-                                help='override the filename used the for backup file',
-                                default='rundeck-backup-{}.zip'.format(
-                            datetime.now().strftime('%Y-%M-%d--%H-%m-%S')))
+    backup_parser.add_argument(
+        '--dest',
+        type=str,
+        required=True,
+        help='path to write backup file to')
+    backup_parser.add_argument(
+        '--filename',
+        type=str,
+        help='override the filename used the for backup file',
+        default='rundeck-backup-{}.zip'.format(
+            datetime.now().strftime('%Y-%M-%d--%H-%m-%S')))
 
     # Restore options
-    restore_parser = subparsers.add_parser('restore',
-                                            help='restore from a backup file')
-    restore_parser.add_argument('--file',
-                                type=str,
-                                help='path to backup file to restore from')
+    restore_parser = subparsers.add_parser(
+        'restore',
+        help='restore from a backup file')
+    restore_parser.add_argument(
+        '--file',
+        type=str,
+        help='path to backup file to restore from')
     main(parser.parse_args())
