@@ -6,7 +6,7 @@ from progress.bar import Bar
 
 class Dinghy:
 
-    def __init__(self, show_progress):
+    def __init__(self, system_directories, show_progress):
         # Refuse to do anything if RunDeck is running
         # This is best practice according to the docs:
         # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
@@ -19,13 +19,7 @@ class Dinghy:
         self.bar = None
         self.show_progress = show_progress
         # Directories to include in backup and restore
-        self.source_directories = [
-            # "/var/lib/rundeck/data",            # database
-            # "/var/lib/rundeck/logs",            # execution logs (by far biggest)
-            # "/var/lib/rundeck/.ssh",            # ssh keys
-            # "/var/lib/rundeck/var/storage",     # key storage files and metadata
-            "/var/rundeck/projects"             # project definitions
-        ]
+        self.system_directories = system_directories
 
     def _rundeck_is_running(self):
         """
@@ -73,7 +67,7 @@ class Dinghy:
         if self.show_progress:
             # Count files in all directories
             logging.info("counting files...")
-            for directory in self.source_directories:
+            for directory in self.system_directories:
                 for root, dirs, files in os.walk(directory):
                     for f in files:
                         self.count += 1
@@ -84,7 +78,7 @@ class Dinghy:
         # Create zip file and save all directories to it
         # allowZip64 must be True to allow file size > 4GB
         with zipfile.ZipFile(file_path, 'w', allowZip64=True) as zip_file:
-            for directory in self.source_directories:
+            for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 self._add_directory_to_zip(zip_file, directory)
                 print("") # To get the progress bar on separate line from
@@ -114,7 +108,29 @@ def main(arguments):
     # Set up logging
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',level=log_level)
 
-    dinghy = Dinghy(show_progress=show_progress)
+    # Set backup directories
+    if arguments.dirs:
+        print(arguments.dirs)
+        system_directories = arguments.dirs[0].split(",")
+        # Validate that no space is left in input
+        for directory in system_directories:
+            if os.path.exists(directory) or os.access(directory, os.W_OK):
+                pass
+            else:
+                raise Exception("directory is not a valid path "
+                                "or not writeable: {}".format(directory))
+    else:
+        # Default is to backup and restore all directories
+        system_directories = [
+            "/var/lib/rundeck/data",          # database
+            "/var/lib/rundeck/logs",          # execution logs (by far biggest)
+            "/var/lib/rundeck/.ssh",          # ssh keys
+            "/var/lib/rundeck/var/storage",   # key storage files and metadata
+            "/var/rundeck/projects"           # project definitions
+        ]
+
+    dinghy = Dinghy(system_directories=system_directories,
+                    show_progress=show_progress)
 
     if parser_name == "backup":
         # Run backup
@@ -132,6 +148,10 @@ if __name__ == "__main__":
     parser.add_argument('--no-progress',
                         action='store_true',
                         help='disable progress bar')
+    parser.add_argument('--dirs',
+                        type=str,
+                        nargs="*",
+                        help='comma-separated list that overrides the default list of system directories to backup/restore')
 
     subparsers = parser.add_subparsers(help='command help',
                                        dest='subparser_name')
