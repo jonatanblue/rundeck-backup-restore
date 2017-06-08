@@ -32,7 +32,11 @@ class Dinghy:
         Returns True if rundeckd is running, False otherwise
         """
         try:
-            status = subprocess.check_output(["service", "rundeckd", "status"])
+            status = subprocess.check_output(
+                ["service", "rundeckd", "status"],
+                # Universal newlines ensures error.output is a string
+                universal_newlines=True
+            )
         except subprocess.CalledProcessError as error:
             if "rundeckd is not running" not in error.output:
                 raise Exception("error running service command")
