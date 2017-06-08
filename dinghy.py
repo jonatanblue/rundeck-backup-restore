@@ -26,6 +26,29 @@ class Dinghy:
         # Directories to include in backup and restore
         self.system_directories = system_directories
 
+        # Raise exception if duplicate or
+        # overlapping directories are passed in
+        if self._has_duplicate_or_overlap(self.system_directories):
+            raise Exception("duplicate or overlapping directories detected")
+
+    def _has_duplicate_or_overlap(self, paths):
+        """
+        Returns true if there are duplicate or overlapping
+        paths in a list of paths
+        """
+        if len(paths) > 1:
+            first = paths[0]
+            remaining = paths[1:]
+            for item in remaining:
+                if first in item or item in first:
+                    logging.error("found conflicting paths {},{}".format(
+                        first,
+                        item
+                    ))
+                    return True
+            self._has_duplicate_or_overlap(remaining)
+        return False
+
     def _rundeck_is_running(self):
         """
         Returns True if rundeckd is running, False otherwise
@@ -47,14 +70,13 @@ class Dinghy:
             return False
 
     def _add_directory_to_zip(self, zip_handle, path):
-
         for root, dirs, files in os.walk(path):
             logging.debug("directory: {}".format(root))
             for f in files:
-                if self.show_progress:
-                    self.bar.next()
                 logging.debug("file: {}".format(f))
                 zip_handle.write(os.path.join(root, f))
+                if self.show_progress:
+                    self.bar.next()
 
     def backup(self, destination_path, filename):
         # Start message
@@ -128,6 +150,9 @@ def main(arguments):
             else:
                 raise Exception("directory is not a valid path "
                                 "or not writeable: {}".format(directory))
+        logging.warning("overriding default directories with {}".format(
+            system_directories
+        ))
     else:
         # Default is to backup and restore all directories
         system_directories = [
