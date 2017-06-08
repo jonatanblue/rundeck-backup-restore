@@ -3,6 +3,12 @@
 import unittest, os, zipfile, logging, shutil
 from dinghy import Dinghy
 
+
+class MockedDinghy(Dinghy):
+    def __init__(self, *args):
+        pass
+
+
 class TestDinghy(unittest.TestCase):
     """
     Tests for `dinghy.py`
@@ -22,15 +28,113 @@ class TestDinghy(unittest.TestCase):
         """
         shutil.rmtree(path)
 
+    def _list_files_in_zip(self, path):
+        """
+        Returns list of all file paths inside a zip file
+        """
+        with zipfile.ZipFile(path, 'r', allowZip64=True) as archive:
+            return [i for i in archive.namelist()]
+
     def test_instantiating(self):
         """ Test that Dinghy class can be instantiated """
-        dinghy = Dinghy(show_progress=True)
+        directories = [
+            "/var/lib/rundeck/data",          # database
+            "/var/lib/rundeck/logs",          # execution logs (by far biggest)
+            "/var/lib/rundeck/.ssh",          # ssh keys
+            "/var/lib/rundeck/var/storage",   # key storage files and metadata
+            "/var/rundeck/projects"           # project definitions
+        ]
+        Dinghy(system_directories=directories, show_progress=True)
+
+    def test_has_overlap(self):
+        """
+        Test that overlap check works
+        """
+        overlapping_dirs = [
+            "/tmp/a/b",
+            "/tmp/a"
+        ]
+        dinghy = MockedDinghy()
+        self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
+
+    def test_has_overlap_reverse(self):
+        """
+        Test that overlap check works
+        """
+        overlapping_dirs = [
+            "/tmp/a",
+            "/tmp/a/b"
+        ]
+        dinghy = MockedDinghy()
+        self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
+
+    def test_has_duplicate(self):
+        """
+        Test that duplicate check works
+        """
+        duplicate_dirs = [
+            "/tmp/a/b",
+            "/tmp/a/b"
+        ]
+        dinghy = MockedDinghy()
+
+        self.assertTrue(dinghy._has_duplicate_or_overlap(duplicate_dirs))
+
+    def test_valid_path_list(self):
+        """
+        Test that a valid path list is valid according to check
+        """
+        valid_dirs = [
+            "/tmp/a/b/c",
+            "/tmp/a/b/d",
+            "/tmp/q",
+            "/var/troll"
+        ]
+
+        dinghy = MockedDinghy()
+
+        self.assertFalse(dinghy._has_duplicate_or_overlap(valid_dirs))
+
+    def test_raises_exception_on_overlapping_dirs(self):
+        """
+        Test that the dinghy raises exception for duplicate
+        or overlapping directories. For example /tmp/a/b/c,/tmp/a/b should fail
+        """
+        # Set bad directories
+        bad_directories = [
+            "/tmp/dinghy_python_unittest_raises/a/b/c",
+            "/tmp/dinghy_python_unittest_raises/a/b"
+        ]
+        # Set sails
+        with self.assertRaises(Exception):
+            Dinghy(system_directories=bad_directories, show_progress=False)
+
+    def test_raises_exception_on_overlapping_dirs_reversed(self):
+        """
+        Test that the dinghy raises exception for duplicate
+        or overlapping directories. For example /tmp/a/b,/tmp/a/b/c should fail
+        """
+        # Set bad directories
+        bad_directories = [
+            "/tmp/dinghy_python_unittest_raises/a/b",
+            "/tmp/dinghy_python_unittest_raises/a/b/c"
+        ]
+        # Set sails
+        with self.assertRaises(Exception):
+            Dinghy(system_directories=bad_directories, show_progress=False)
 
     def test_add_directory_to_zip(self):
         """ Test that a directory can be added to a zip file """
 
         # Set sails
-        dinghy = Dinghy(show_progress=False)
+        directories = [
+            "/var/lib/rundeck/data",          # database
+            "/var/lib/rundeck/logs",          # execution logs (by far biggest)
+            "/var/lib/rundeck/.ssh",          # ssh keys
+            "/var/lib/rundeck/var/storage",   # key storage files and metadata
+            "/var/rundeck/projects"           # project definitions
+        ]
+        dinghy = Dinghy(system_directories=directories, show_progress=False)
 
         # Set up workspace
         workpath = "/tmp/dinghy_test_add_directory_to_zip"
@@ -48,18 +152,74 @@ class TestDinghy(unittest.TestCase):
             # Add directory
             dinghy._add_directory_to_zip(archive, directory_path)
 
-        # Open zip file
-        with zipfile.ZipFile(filepath, 'r', allowZip64=True) as archive:
-            file_in_zip = [i for i in archive.namelist()][0]
+        file_in_zip = self._list_files_in_zip(filepath)[0]
 
         expected = textfile_path
         actual = os.path.join("/", file_in_zip)
 
         # Assert that directory exists in zip file
-        self.assertEqual(actual,
-                          expected,
-                          msg="actual={},expected={}".format(
-                            actual,
-                            expected))
+        self.assertEqual(
+            actual,
+            expected,
+            msg="actual={},expected={}".format(
+                actual,
+                expected))
         # Clean up
         self._purge_directory(workpath)
+
+    def test_backup(self):
+        """
+        Test creating a backup file from a set of directories
+        """
+
+        # Set paths
+        file_paths = [
+            "/tmp/dinghy_python_unittest_backup/house/room/file1.txt",
+            "/tmp/dinghy_python_unittest_backup/house/room/desk/file2.txt",
+            "/tmp/dinghy_python_unittest_backup/house/room/desk/file3.txt",
+            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/file4",
+            "/tmp/dinghy_python_unittest_backup/house/room/locker/file5.txt"
+        ]
+        folder_paths_to_create = [
+            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/",
+            "/tmp/dinghy_python_unittest_backup/house/room/locker"
+        ]
+        directories_to_backup = [
+            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/",
+            "/tmp/dinghy_python_unittest_backup/house/room/locker/"
+        ]
+        files_expected_in_zip = [
+            "tmp/dinghy_python_unittest_backup/house/room/desk/drawer/file4",
+            "tmp/dinghy_python_unittest_backup/house/room/locker/file5.txt"
+        ]
+
+        # Set sails
+        dinghy = Dinghy(system_directories=directories_to_backup,
+                        show_progress=False)
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup test
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        dinghy.backup(
+            destination_path="/tmp/dinghy_python_unittest_backup",
+            filename="backup_test.zip"
+        )
+
+        # Get list of all file paths inside zip file
+        files_in_zip = self._list_files_in_zip(
+            "/tmp/dinghy_python_unittest_backup/backup_test.zip")
+
+        # Zip file can't be empty
+        self.assertNotEqual(len(files_in_zip), 0)
+
+        # Compare zip file and list of files
+        self.assertEqual(files_expected_in_zip,
+                         files_in_zip)
