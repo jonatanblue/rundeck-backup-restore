@@ -49,4 +49,4 @@ For bug fixes and new features, make sure you have added tests that cover the us
 # Similar tools
 
 * The [official docs](http://rundeck.org/2.6.11/administration/backup-and-recovery.html) describe two options: either manually copy all data, using a combination of tools, or export an archive file from the web. The latter can take several hours, and does not include all files you may need.
-* [ersiko](https://github.com/ersiko/rundeck-backup) last commit 31 Mar 2013. There's a [blog post](https://blog.tomas.cat/en/2013/03/27/tool-manage-rundeck-backups/) describing how to use it.
+* [ersiko/rundeck-backup](https://github.com/ersiko/rundeck-backup) last commit 31 Mar 2013. There's a [blog post](https://blog.tomas.cat/en/2013/03/27/tool-manage-rundeck-backups/) describing how to use it.
