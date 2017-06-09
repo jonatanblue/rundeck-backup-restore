@@ -5,6 +5,7 @@ import os
 import glob
 import zipfile
 import shutil
+import tarfile
 from dinghy import Dinghy
 import dinghy
 
@@ -29,10 +30,10 @@ class TestDinghy(unittest.TestCase):
         """
         shutil.rmtree(path)
 
-    def _list_files_in_zip(self, path):
-        """Returns list of all file paths inside a zip file"""
-        with zipfile.ZipFile(path, 'r', allowZip64=True) as archive:
-            return [i for i in archive.namelist()]
+    def _list_files_in_tar(self, path):
+        """Returns list of all file paths inside a tar file"""
+        with tarfile.open(path, 'r:gz') as archive:
+            return [i.name for i in archive.namelist()]
 
     def test_instantiating(self):
         """Test that Dinghy class can be instantiated"""
