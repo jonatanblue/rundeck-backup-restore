@@ -2,9 +2,11 @@
 
 import unittest
 import os
+import glob
 import zipfile
 import shutil
 from dinghy import Dinghy
+import dinghy
 
 
 class MockedDinghy(Dinghy):
@@ -363,3 +365,105 @@ class TestDinghy(unittest.TestCase):
 
         # Purge the test directory
         self._purge_directory(base)
+
+    def test_backup_file_name_different_for_partial(self):
+        """
+        If there is a directory override, the file should have
+        "partial" in the name
+        """
+        # Set paths
+        base = "/tmp/dinghy_python_unittest_partial_name"
+        file_paths = [
+            base + "/a/b/c.txt",
+            base + "/q/r.txt"
+        ]
+        folder_paths_to_create = [
+            base + "/a/b",
+            base + "/q"
+        ]
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup test
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        args = dinghy.parse_args([
+            '--dirs=/tmp/dinghy_python_unittest_partial_name/a/b',
+            'backup',
+            '--dest', '/tmp/dinghy_python_unittest_partial_name'
+        ])
+        dinghy.main(args)
+
+        # Get filename
+        archive_filename = glob.glob(base + "/*.zip")[0]
+
+        self.assertTrue("partial" in archive_filename)
+
+        # Recursively remove all directories and files used in test
+        self._purge_directory("/tmp/dinghy_python_unittest_partial_name")
+
+    def test_restore_subset_directories(self):
+        """
+        Test restoring a subset of directories
+        """
+        # Set paths
+        base = "/tmp/dinghy_python_unittest_restore_subset"
+        file_paths = [
+            base + "/a/b/file1.txt",
+            base + "/a/b/c/file2.txt",
+            base + "/a/b/c/file3.txt",
+            base + "/a/b/c/e/file4.txt",
+            base + "/a/b/d/file5.txt"
+        ]
+        folder_paths_to_create = [
+            base + "/a/b/c/e/",
+            base + "/a/b/d"
+        ]
+        files_expected_in_restore = [
+            base + "/a/b/c/e/file4.txt"
+        ]
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        args = dinghy.parse_args([
+            '--dirs=' + base + '/a/b',
+            'backup',
+            '--dest', base,
+            '--filename', "test.zip"
+        ])
+        dinghy.main(args)
+
+        # Purge the source directory
+        self._purge_directory(base + "/a")
+
+        # Restore
+        args = dinghy.parse_args([
+            '--dirs=' + base + '/a/b/c/e',
+            'restore',
+            '--file=' + base + '/test.zip'
+        ])
+        dinghy.main(args)
+
+        # List all directories
+        restored = base + "/a"
+        files_found = []
+        for root, dirs, files in os.walk(restored):
+            for f in files:
+                files_found.append(os.path.join(root, f))
+
+        self.assertEqual(files_found, files_expected_in_restore)

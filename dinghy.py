@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import os
+import sys
 import logging
 import zipfile
 from datetime import datetime
@@ -11,7 +12,7 @@ from progress.bar import Bar
 
 class Dinghy:
 
-    def __init__(self, system_directories, show_progress):
+    def __init__(self, system_directories=None, show_progress=False):
         # Refuse to do anything if RunDeck is running
         # This is best practice according to the docs:
         # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
@@ -24,7 +25,17 @@ class Dinghy:
         self.bar = None
         self.show_progress = show_progress
         # Directories to include in backup and restore
-        self.system_directories = system_directories
+        if system_directories is None:
+            # Default is to backup and restore all directories
+            self.system_directories = [
+                "/var/lib/rundeck/data",          # database
+                "/var/lib/rundeck/logs",          # execution logs (biggest)
+                "/var/lib/rundeck/.ssh",          # ssh keys
+                "/var/lib/rundeck/var/storage",   # keystore files and metadata
+                "/var/rundeck/projects"           # project definitions
+            ]
+        else:
+            self.system_directories = system_directories
 
         # Raise exception if duplicate or
         # overlapping directories are passed in
@@ -116,24 +127,48 @@ class Dinghy:
             # Close progress bar
             self.bar.finish()
 
-    def restore(self, filepath):
+    def restore(self, filepath, directories=None):
         """
         Restores files from a backup zip file
         """
-        with zipfile.ZipFile(filepath, 'r', allowZip64=True) as archive:
+        def _check_paths_before_restore(pathlist):
             # Check that no file already exists
-            all_files = [i for i in archive.namelist()]
-            for item in all_files:
-                path = os.path.join("/", item)
-                if (os.path.isfile(path)):
+            for path in pathlist:
+                full_path = os.path.join("/", path)
+                if (os.path.isfile(full_path)):
                     logging.error(
-                        "no action taken, refusing to restore when "
-                        " file already exists on file system: {}".format(path)
+                        "no action taken, refusing to restore when"
+                        " file already exists on file system: {}".format(
+                            full_path
+                        )
                     )
                     raise Exception(
-                        "refusing to overwrite existing file: {}".format(path)
+                        "refusing to overwrite existing file: {}".format(
+                            full_path
+                        )
                     )
-            archive.extractall("/")
+
+        with zipfile.ZipFile(filepath, 'r', allowZip64=True) as archive:
+            all_files = [i for i in archive.namelist()]
+            # Only restore files under certain directories
+            files_to_restore = []
+            for line in all_files:
+                # Check each directory against all files
+                for path in self.system_directories:
+                    # Remove any '/' from the start of the path
+                    if path.startswith('/'):
+                        path = path[1:]
+                    if line.startswith(path):
+                        files_to_restore.append(line)
+            # Check that files don't already exist before restoring
+            _check_paths_before_restore(files_to_restore)
+            logging.info("restoring files into directories {}".format(
+                ",".join(self.system_directories)
+            ))
+            logging.debug("files_to_restore: {}".format(files_to_restore))
+            for file_path in files_to_restore:
+                logging.debug("restoring file {}".format(file_path))
+                archive.extract(file_path, "/")
 
 
 def main(arguments):
@@ -157,40 +192,44 @@ def main(arguments):
 
     # Set backup directories
     if arguments.dirs:
-        print(arguments.dirs)
         system_directories = arguments.dirs[0].split(",")
-        # Validate that no space is left in input
-        for directory in system_directories:
-            if os.path.exists(directory) or os.access(directory, os.W_OK):
-                pass
-            else:
-                raise Exception("directory is not a valid path "
-                                "or not writeable: {}".format(directory))
-        logging.warning("overriding default directories with {}".format(
-            system_directories
-        ))
+        if parser_name == "backup":
+            # Validate that paths exist
+            for directory in system_directories:
+                if os.path.exists(directory) or os.access(directory, os.W_OK):
+                    pass
+                else:
+                    raise Exception("directory is not a valid path "
+                                    "or not writeable: {}".format(directory))
+            logging.warning("overriding default directories with {}".format(
+                ",".join(system_directories)
+            ))
+        # Add "partial" to the name since we are overriding
+        partial = "partial-"
     else:
-        # Default is to backup and restore all directories
-        system_directories = [
-            "/var/lib/rundeck/data",          # database
-            "/var/lib/rundeck/logs",          # execution logs (by far biggest)
-            "/var/lib/rundeck/.ssh",          # ssh keys
-            "/var/lib/rundeck/var/storage",   # key storage files and metadata
-            "/var/rundeck/projects"           # project definitions
-        ]
+        system_directories = None
+        partial = ""
 
     dinghy = Dinghy(system_directories=system_directories,
                     show_progress=show_progress)
 
     if parser_name == "backup":
-        # Run backup
-        dinghy.backup(destination_path=arguments.dest,
-                      filename=arguments.filename)
+        # Set the name of the backup file to be created
+        if arguments.filename:
+            backup_filename = arguments.filename
+        else:
+            backup_filename = "rundeck-backup-" + partial + "{}.zip".format(
+                datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
+            )
+        dinghy.backup(
+            destination_path=arguments.dest,
+            filename=backup_filename)
     elif parser_name == "restore":
-        dinghy.restore(filename=arguments.file)
+        dinghy.restore(
+            filepath=arguments.file)
 
 
-if __name__ == "__main__":
+def parse_args(args):
     parser = argparse.ArgumentParser(
         description='dinghy: helper for backup and restore of RunDeck')
     parser.add_argument(
@@ -222,9 +261,7 @@ if __name__ == "__main__":
     backup_parser.add_argument(
         '--filename',
         type=str,
-        help='override the filename used the for backup file',
-        default='rundeck-backup-{}.zip'.format(
-            datetime.now().strftime('%Y-%M-%d--%H-%m-%S')))
+        help='override the filename used the for backup file')
 
     # Restore options
     restore_parser = subparsers.add_parser(
@@ -234,4 +271,10 @@ if __name__ == "__main__":
         '--file',
         type=str,
         help='path to backup file to restore from')
-    main(parser.parse_args())
+
+    return parser.parse_args(args)
+
+
+if __name__ == "__main__":
+    parsed = parse_args(sys.argv[1:])
+    main(parsed)
