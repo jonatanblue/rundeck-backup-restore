@@ -226,3 +226,140 @@ class TestDinghy(unittest.TestCase):
         # Compare zip file and list of files
         self.assertEqual(files_expected_in_zip,
                          files_in_zip)
+
+        # Recursively remove all directories and files used in test
+        self._purge_directory("/tmp/dinghy_python_unittest_backup")
+
+    def test_restore(self):
+        """
+        Test restoring a set of directories and files from a backup file
+        """
+
+        # Set paths
+        file_paths = [
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/file1.txt",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/file2.txt",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/file3.txt",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/f4",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/file5.txt"
+        ]
+        folder_paths_to_create = [
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker"
+        ]
+        directories_to_backup = [
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/"
+        ]
+        files_expected_in_restore = [
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/f4",
+            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/file5.txt"
+        ]
+
+        # Set sails
+        dinghy = Dinghy(system_directories=directories_to_backup,
+                        show_progress=False)
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        dinghy.backup(
+            destination_path="/tmp/dinghy_python_unittest_restore",
+            filename="restore_test.zip"
+        )
+
+        # Purge the source directory
+        self._purge_directory("/tmp/dinghy_python_unittest_restore/hotel")
+
+        # Restore
+        dinghy.restore("/tmp/dinghy_python_unittest_restore/restore_test.zip")
+
+        # List all directories
+        restored = "/tmp/dinghy_python_unittest_restore/hotel"
+        files_found = []
+        for root, dirs, files in os.walk(restored):
+            for f in files:
+                files_found.append(os.path.join(root, f))
+
+        self.assertEqual(files_found, files_expected_in_restore)
+
+    def test_restore_does_not_overwrite(self):
+        """
+        Test that existing files are not overwritten by restore
+        """
+        base = "/tmp/dinghy_python_unittest_restore_no_overwrite"
+        # Set paths
+        file_paths = [
+            base + "/hotel/lobby/file1.txt",
+            base + "/hotel/lobby/desk/file2.txt",
+            base + "/hotel/lobby/desk/file3.txt",
+            base + "/hotel/lobby/desk/drawer/f4",
+            base + "/hotel/lobby/locker/file5.txt"
+        ]
+        folder_paths_to_create = [
+            base + "/hotel/lobby/desk/drawer/",
+            base + "/hotel/lobby/locker"
+        ]
+        directories_to_backup = [
+            base + "/hotel/lobby/desk/drawer/",
+            base + "/hotel/lobby/locker/"
+        ]
+        files_expected_in_restore = [
+            base + "/hotel/lobby/desk/drawer/f4",
+            base + "/hotel/lobby/locker/file5.txt"
+        ]
+
+        # Set sails
+        dinghy = Dinghy(system_directories=directories_to_backup,
+                        show_progress=False)
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        dinghy.backup(
+            destination_path=base,
+            filename="restore_test.zip"
+        )
+
+        # Write to files again
+        for name in files_expected_in_restore:
+            with open(name, "w") as file_handle:
+                file_handle.write("new version\n")
+
+        # Restore should raise exception on existing file
+        with self.assertRaises(Exception):
+            dinghy.restore(base + "/restore_test.zip")
+
+        # Get file contents
+        files_content = []
+        for name in files_expected_in_restore:
+            with open(name, "r") as file_handle:
+                content = file_handle.read()
+                files_content.append(content)
+
+        self.assertEqual(
+            files_content,
+            [
+                "new version\n",
+                "new version\n"
+            ]
+        )
+
+        # Purge the test directory
+        self._purge_directory(base)

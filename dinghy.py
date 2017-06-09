@@ -116,8 +116,24 @@ class Dinghy:
             # Close progress bar
             self.bar.finish()
 
-    def restore(self, filename):
-        return
+    def restore(self, filepath):
+        """
+        Restores files from a backup zip file
+        """
+        with zipfile.ZipFile(filepath, 'r', allowZip64=True) as archive:
+            # Check that no file already exists
+            all_files = [i for i in archive.namelist()]
+            for item in all_files:
+                path = os.path.join("/", item)
+                if (os.path.isfile(path)):
+                    logging.error(
+                        "no action taken, refusing to restore when "
+                        " file already exists on file system: {}".format(path)
+                    )
+                    raise Exception(
+                        "refusing to overwrite existing file: {}".format(path)
+                    )
+            archive.extractall("/")
 
 
 def main(arguments):
