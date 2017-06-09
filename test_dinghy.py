@@ -15,33 +15,27 @@ class MockedDinghy(Dinghy):
 
 
 class TestDinghy(unittest.TestCase):
-    """
-    Tests for `dinghy.py`
-    """
-
+    """Tests for `dinghy.py`"""
     def _create_dir(self, path):
-        """
-        Create directory
-        """
+        """Creates directory"""
         if not os.path.exists(path):
             os.makedirs(path)
 
     def _purge_directory(self, path):
-        """
+        """Purges a directory and all its subdirectories
+
         WARNING: This will recursively delete the directory and all
         subdirectories forever.
         """
         shutil.rmtree(path)
 
     def _list_files_in_zip(self, path):
-        """
-        Returns list of all file paths inside a zip file
-        """
+        """Returns list of all file paths inside a zip file"""
         with zipfile.ZipFile(path, 'r', allowZip64=True) as archive:
             return [i for i in archive.namelist()]
 
     def test_instantiating(self):
-        """ Test that Dinghy class can be instantiated """
+        """Test that Dinghy class can be instantiated"""
         directories = [
             "/var/lib/rundeck/data",          # database
             "/var/lib/rundeck/logs",          # execution logs (by far biggest)
@@ -52,9 +46,7 @@ class TestDinghy(unittest.TestCase):
         Dinghy(system_directories=directories, show_progress=True)
 
     def test_has_overlap(self):
-        """
-        Test that overlap check works
-        """
+        """Test that overlap check works"""
         overlapping_dirs = [
             "/tmp/a/b",
             "/tmp/a"
@@ -63,9 +55,7 @@ class TestDinghy(unittest.TestCase):
         self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
 
     def test_has_overlap_reverse(self):
-        """
-        Test that overlap check works
-        """
+        """Test that overlap check works"""
         overlapping_dirs = [
             "/tmp/a",
             "/tmp/a/b"
@@ -74,9 +64,7 @@ class TestDinghy(unittest.TestCase):
         self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
 
     def test_has_duplicate(self):
-        """
-        Test that duplicate check works
-        """
+        """Test that duplicate check works"""
         duplicate_dirs = [
             "/tmp/a/b",
             "/tmp/a/b"
@@ -86,9 +74,7 @@ class TestDinghy(unittest.TestCase):
         self.assertTrue(dinghy._has_duplicate_or_overlap(duplicate_dirs))
 
     def test_valid_path_list(self):
-        """
-        Test that a valid path list is valid according to check
-        """
+        """Test that a valid path list is valid according to check"""
         valid_dirs = [
             "/tmp/a/b/c",
             "/tmp/a/b/d",
@@ -101,9 +87,10 @@ class TestDinghy(unittest.TestCase):
         self.assertFalse(dinghy._has_duplicate_or_overlap(valid_dirs))
 
     def test_raises_exception_on_overlapping_dirs(self):
-        """
-        Test that the dinghy raises exception for duplicate
-        or overlapping directories. For example /tmp/a/b/c,/tmp/a/b should fail
+        """Test that exception is raised for overlapping dirs
+
+        Passing overlapping directories should raise an exception.
+        For example /tmp/a/b/c,/tmp/a/b should fail
         """
         # Set bad directories
         bad_directories = [
@@ -115,9 +102,9 @@ class TestDinghy(unittest.TestCase):
             Dinghy(system_directories=bad_directories, show_progress=False)
 
     def test_raises_exception_on_overlapping_dirs_reversed(self):
-        """
-        Test that the dinghy raises exception for duplicate
-        or overlapping directories. For example /tmp/a/b,/tmp/a/b/c should fail
+        """Test that exception is raised for overlapping dirs.
+
+        For example /tmp/a/b,/tmp/a/b/c should fail
         """
         # Set bad directories
         bad_directories = [
@@ -129,8 +116,7 @@ class TestDinghy(unittest.TestCase):
             Dinghy(system_directories=bad_directories, show_progress=False)
 
     def test_add_directory_to_zip(self):
-        """ Test that a directory can be added to a zip file """
-
+        """Test that a directory can be added to a zip file"""
         # Set sails
         directories = [
             "/var/lib/rundeck/data",          # database
@@ -173,10 +159,7 @@ class TestDinghy(unittest.TestCase):
         self._purge_directory(workpath)
 
     def test_backup(self):
-        """
-        Test creating a backup file from a set of directories
-        """
-
+        """Test creating a backup file from a set of directories"""
         # Set paths
         file_paths = [
             "/tmp/dinghy_python_unittest_backup/house/room/file1.txt",
@@ -233,10 +216,7 @@ class TestDinghy(unittest.TestCase):
         self._purge_directory("/tmp/dinghy_python_unittest_backup")
 
     def test_restore(self):
-        """
-        Test restoring a set of directories and files from a backup file
-        """
-
+        """Test restoring a set of directories and files from a backup file"""
         # Set paths
         file_paths = [
             "/tmp/dinghy_python_unittest_restore/hotel/lobby/file1.txt",
@@ -294,9 +274,7 @@ class TestDinghy(unittest.TestCase):
         self.assertEqual(files_found, files_expected_in_restore)
 
     def test_restore_does_not_overwrite(self):
-        """
-        Test that existing files are not overwritten by restore
-        """
+        """Test that existing files are not overwritten by restore"""
         base = "/tmp/dinghy_python_unittest_restore_no_overwrite"
         # Set paths
         file_paths = [
@@ -367,7 +345,8 @@ class TestDinghy(unittest.TestCase):
         self._purge_directory(base)
 
     def test_backup_file_name_different_for_partial(self):
-        """
+        """Test that partial backup file is named correctly
+
         If there is a directory override, the file should have
         "partial" in the name
         """
@@ -409,9 +388,7 @@ class TestDinghy(unittest.TestCase):
         self._purge_directory("/tmp/dinghy_python_unittest_partial_name")
 
     def test_restore_subset_directories(self):
-        """
-        Test restoring a subset of directories
-        """
+        """Test restoring a subset of directories"""
         # Set paths
         base = "/tmp/dinghy_python_unittest_restore_subset"
         file_paths = [

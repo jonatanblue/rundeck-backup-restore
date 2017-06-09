@@ -43,10 +43,7 @@ class Dinghy:
             raise Exception("duplicate or overlapping directories detected")
 
     def _has_duplicate_or_overlap(self, paths):
-        """
-        Returns true if there are duplicate or overlapping
-        paths in a list of paths
-        """
+        """Return true if list of paths has duplicate or overlapping paths"""
         if len(paths) > 1:
             first = paths[0]
             remaining = paths[1:]
@@ -61,9 +58,7 @@ class Dinghy:
         return False
 
     def _rundeck_is_running(self):
-        """
-        Returns True if rundeckd is running, False otherwise
-        """
+        """Return True if rundeckd is running, False otherwise"""
         try:
             status = subprocess.check_output(
                 ["service", "rundeckd", "status"],
@@ -81,6 +76,7 @@ class Dinghy:
             return False
 
     def _add_directory_to_zip(self, zip_handle, path):
+        """Add a directory to a zip file"""
         for root, dirs, files in os.walk(path):
             logging.debug("directory: {}".format(root))
             for f in files:
@@ -90,6 +86,7 @@ class Dinghy:
                     self.bar.next()
 
     def backup(self, destination_path, filename):
+        """Create a backup file"""
         # Start message
         logging.debug("starting backup")
 
@@ -128,11 +125,9 @@ class Dinghy:
             self.bar.finish()
 
     def restore(self, filepath, directories=None):
-        """
-        Restores files from a backup zip file
-        """
+        """Restore files from a backup zip file"""
         def _check_paths_before_restore(pathlist):
-            # Check that no file already exists
+            """Check all files and raise exceptions if any already exists"""
             for path in pathlist:
                 full_path = os.path.join("/", path)
                 if (os.path.isfile(full_path)):
