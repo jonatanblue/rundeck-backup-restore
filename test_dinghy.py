@@ -262,7 +262,9 @@ class TestDinghy(unittest.TestCase):
         self._purge_directory("/tmp/dinghy_python_unittest_restore/hotel")
 
         # Restore
-        dinghy.restore("/tmp/dinghy_python_unittest_restore/restore_test.tar.gz")
+        dinghy.restore(
+            "/tmp/dinghy_python_unittest_restore"
+            "/restore_test.tar.gz")
 
         # List all directories
         restored = "/tmp/dinghy_python_unittest_restore/hotel"
