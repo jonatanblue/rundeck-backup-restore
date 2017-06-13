@@ -5,8 +5,14 @@ import os
 import glob
 import shutil
 import tarfile
-from dinghy import Dinghy
 import dinghy
+
+
+# Override method that checks if rundeckd is running
+# to allow tests to run on machine that doens't have rundeck installed.
+class Dinghy(dinghy.Dinghy):
+    def _rundeck_is_running(self):
+        return False
 
 
 class MockedDinghy(Dinghy):
