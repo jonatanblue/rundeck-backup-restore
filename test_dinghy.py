@@ -103,6 +103,20 @@ class TestDinghy(unittest.TestCase):
 
         self.assertFalse(dinghy._has_duplicate_or_overlap(valid_dirs))
 
+    def test_raises_exception_on_relative_paths(self):
+        """Test that relative paths raise an exception"""
+        contains_relative_paths = [
+            "some/path/here",
+            "some/other/path",
+            "/this/is/valid/though"
+        ]
+        with self.assertRaises(Exception):
+            Dinghy(
+                system_directories=contains_relative_paths,
+                show_progress=False
+            )
+
+
     def test_raises_exception_on_overlapping_dirs(self):
         """Test that exception is raised for overlapping dirs
 
@@ -405,7 +419,7 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         args = dinghy.parse_args([
-            '--dirs=tmp/dinghy_python_unittest_partial_name/a/b',
+            '--dirs=' + cwd + '/tmp/dinghy_python_unittest_partial_name/a/b',
             'backup',
             '--dest', 'tmp/dinghy_python_unittest_partial_name'
         ])

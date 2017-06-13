@@ -42,6 +42,14 @@ class Dinghy:
         if self._has_duplicate_or_overlap(self.system_directories):
             raise Exception("duplicate or overlapping directories detected")
 
+        # Paths must be absolute
+        for path in self.system_directories:
+            if path[0] != "/":
+                # Path is relative
+                raise Exception(
+                    "relative paths not allowed, please fix {}".format(path)
+                )
+
     def _has_duplicate_or_overlap(self, paths):
         """Return true if list of paths has duplicate or overlapping paths"""
         if len(paths) > 1:
