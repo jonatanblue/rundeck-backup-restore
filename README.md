@@ -4,7 +4,9 @@
 
 CLI tool for RunDeck backup and restore.
 
-**NOTE:** This project is **NOT** ready for production use.
+[![CircleCI](https://circleci.com/gh/jonatanblue/dinghy/tree/master.svg?style=shield)](https://circleci.com/gh/jonatanblue/dinghy/tree/master)
+
+**NOTE:** This project is still in beta. Please proceed with caution.
 
 # How to use
 
