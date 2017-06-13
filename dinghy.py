@@ -67,7 +67,10 @@ class Dinghy:
             )
         except subprocess.CalledProcessError as error:
             if "rundeckd is not running" not in error.output:
-                raise Exception("error running service command")
+                raise Exception(
+                    "error running service command, "
+                    "is rundeckd installed on this machine?"
+                )
             else:
                 status = error.output
         if "rundeckd is running" in status:
@@ -143,7 +146,13 @@ class Dinghy:
                     )
 
         with tarfile.open(filepath, 'r:gz') as archive:
-            all_files = [i for i in archive.getnames()]
+            all_files = archive.getnames()
+            if self.show_progress:
+                # Count files in tar file
+                self.count = len(all_files)
+                logging.debug("total number of files is {}".format(self.count))
+                # Create progress bar
+                self.bar = Bar('Processing', max=self.count)
             # Only restore files under certain directories
             files_to_restore = []
             for line in all_files:
@@ -155,6 +164,9 @@ class Dinghy:
                     if line.startswith(path):
                         files_to_restore.append(line)
             # Check that files don't already exist before restoring
+            logging.info(
+                "checking restore paths to avoid overwriting existing files..."
+            )
             _check_paths_before_restore(files_to_restore)
             logging.info("restoring files into directories {}".format(
                 ",".join(self.system_directories)
@@ -163,6 +175,10 @@ class Dinghy:
             for file_path in files_to_restore:
                 logging.debug("restoring file {}".format(file_path))
                 archive.extract(file_path, "/")
+
+        if self.show_progress:
+            # Close progress bar
+            self.bar.finish()
 
 
 def main(arguments):
