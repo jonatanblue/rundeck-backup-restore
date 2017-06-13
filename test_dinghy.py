@@ -3,8 +3,8 @@
 import unittest
 import os
 import glob
-import zipfile
 import shutil
+import tarfile
 from dinghy import Dinghy
 import dinghy
 
@@ -29,10 +29,10 @@ class TestDinghy(unittest.TestCase):
         """
         shutil.rmtree(path)
 
-    def _list_files_in_zip(self, path):
-        """Returns list of all file paths inside a zip file"""
-        with zipfile.ZipFile(path, 'r', allowZip64=True) as archive:
-            return [i for i in archive.namelist()]
+    def _list_files_in_tar(self, path):
+        """Returns list of all file paths inside a tar file"""
+        with tarfile.open(path, 'r:gz') as archive:
+            return archive.getnames()
 
     def test_instantiating(self):
         """Test that Dinghy class can be instantiated"""
@@ -115,8 +115,8 @@ class TestDinghy(unittest.TestCase):
         with self.assertRaises(Exception):
             Dinghy(system_directories=bad_directories, show_progress=False)
 
-    def test_add_directory_to_zip(self):
-        """Test that a directory can be added to a zip file"""
+    def test_add_directory_to_tar(self):
+        """Test that a directory can be added to a tar file"""
         # Set sails
         directories = [
             "/var/lib/rundeck/data",          # database
@@ -128,7 +128,7 @@ class TestDinghy(unittest.TestCase):
         dinghy = Dinghy(system_directories=directories, show_progress=False)
 
         # Set up workspace
-        workpath = "/tmp/dinghy_test_add_directory_to_zip"
+        workpath = "/tmp/dinghy_test_add_directory_to_tar"
         self._create_dir(workpath)
         directory_path = os.path.join(workpath, "/testdir1/subdir1")
         self._create_dir(directory_path)
@@ -136,19 +136,19 @@ class TestDinghy(unittest.TestCase):
         # Create file
         with open(textfile_path, "w") as textfile:
             textfile.write("lorem ipsum")
-        filepath = os.path.join(workpath, "test1.zip")
+        filepath = os.path.join(workpath, "test1.tar.gz")
 
-        # Create zip file
-        with zipfile.ZipFile(filepath, 'w', allowZip64=True) as archive:
+        # Create tar file
+        with tarfile.open(filepath, 'w:gz') as archive:
             # Add directory
-            dinghy._add_directory_to_zip(archive, directory_path)
+            dinghy._add_directory_to_tar(archive, directory_path)
 
-        file_in_zip = self._list_files_in_zip(filepath)[0]
+        file_in_tar = self._list_files_in_tar(filepath)[0]
 
         expected = textfile_path
-        actual = os.path.join("/", file_in_zip)
+        actual = os.path.join("/", file_in_tar)
 
-        # Assert that directory exists in zip file
+        # Assert that directory exists in tar file
         self.assertEqual(
             actual,
             expected,
@@ -176,7 +176,7 @@ class TestDinghy(unittest.TestCase):
             "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/",
             "/tmp/dinghy_python_unittest_backup/house/room/locker/"
         ]
-        files_expected_in_zip = [
+        files_expected_in_tar = [
             "tmp/dinghy_python_unittest_backup/house/room/desk/drawer/file4",
             "tmp/dinghy_python_unittest_backup/house/room/locker/file5.txt"
         ]
@@ -198,19 +198,19 @@ class TestDinghy(unittest.TestCase):
         # Create backup
         dinghy.backup(
             destination_path="/tmp/dinghy_python_unittest_backup",
-            filename="backup_test.zip"
+            filename="backup_test.tar.gz"
         )
 
-        # Get list of all file paths inside zip file
-        files_in_zip = self._list_files_in_zip(
-            "/tmp/dinghy_python_unittest_backup/backup_test.zip")
+        # Get list of all file paths inside tar file
+        files_in_tar = self._list_files_in_tar(
+            "/tmp/dinghy_python_unittest_backup/backup_test.tar.gz")
 
-        # Zip file can't be empty
-        self.assertNotEqual(len(files_in_zip), 0)
+        # tar file can't be empty
+        self.assertNotEqual(len(files_in_tar), 0)
 
-        # Compare zip file and list of files
-        self.assertEqual(files_expected_in_zip,
-                         files_in_zip)
+        # Compare tar file and list of files
+        self.assertEqual(files_expected_in_tar,
+                         files_in_tar)
 
         # Recursively remove all directories and files used in test
         self._purge_directory("/tmp/dinghy_python_unittest_backup")
@@ -255,14 +255,16 @@ class TestDinghy(unittest.TestCase):
         # Create backup
         dinghy.backup(
             destination_path="/tmp/dinghy_python_unittest_restore",
-            filename="restore_test.zip"
+            filename="restore_test.tar.gz"
         )
 
         # Purge the source directory
         self._purge_directory("/tmp/dinghy_python_unittest_restore/hotel")
 
         # Restore
-        dinghy.restore("/tmp/dinghy_python_unittest_restore/restore_test.zip")
+        dinghy.restore(
+            "/tmp/dinghy_python_unittest_restore"
+            "/restore_test.tar.gz")
 
         # List all directories
         restored = "/tmp/dinghy_python_unittest_restore/hotel"
@@ -314,7 +316,7 @@ class TestDinghy(unittest.TestCase):
         # Create backup
         dinghy.backup(
             destination_path=base,
-            filename="restore_test.zip"
+            filename="restore_test.tar.gz"
         )
 
         # Write to files again
@@ -324,7 +326,7 @@ class TestDinghy(unittest.TestCase):
 
         # Restore should raise exception on existing file
         with self.assertRaises(Exception):
-            dinghy.restore(base + "/restore_test.zip")
+            dinghy.restore(base + "/restore_test.tar.gz")
 
         # Get file contents
         files_content = []
@@ -380,7 +382,7 @@ class TestDinghy(unittest.TestCase):
         dinghy.main(args)
 
         # Get filename
-        archive_filename = glob.glob(base + "/*.zip")[0]
+        archive_filename = glob.glob(base + "/*.tar.gz")[0]
 
         self.assertTrue("partial" in archive_filename)
 
@@ -421,7 +423,7 @@ class TestDinghy(unittest.TestCase):
             '--dirs=' + base + '/a/b',
             'backup',
             '--dest', base,
-            '--filename', "test.zip"
+            '--filename', "test.tar.gz"
         ])
         dinghy.main(args)
 
@@ -432,7 +434,7 @@ class TestDinghy(unittest.TestCase):
         args = dinghy.parse_args([
             '--dirs=' + base + '/a/b/c/e',
             'restore',
-            '--file=' + base + '/test.zip'
+            '--file=' + base + '/test.tar.gz'
         ])
         dinghy.main(args)
 

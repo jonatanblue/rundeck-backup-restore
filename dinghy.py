@@ -5,7 +5,7 @@ import subprocess
 import os
 import sys
 import logging
-import zipfile
+import tarfile
 from datetime import datetime
 from progress.bar import Bar
 
@@ -75,13 +75,13 @@ class Dinghy:
         else:
             return False
 
-    def _add_directory_to_zip(self, zip_handle, path):
-        """Add a directory to a zip file"""
+    def _add_directory_to_tar(self, tar_handle, path):
+        """Add a directory to a tar file"""
         for root, dirs, files in os.walk(path):
             logging.debug("directory: {}".format(root))
             for f in files:
                 logging.debug("file: {}".format(f))
-                zip_handle.write(os.path.join(root, f))
+                tar_handle.add(os.path.join(root, f))
                 if self.show_progress:
                     self.bar.next()
 
@@ -110,12 +110,11 @@ class Dinghy:
             # Create progress bar
             self.bar = Bar('Processing', max=self.count)
 
-        # Create zip file and save all directories to it
-        # allowZip64 must be True to allow file size > 4GB
-        with zipfile.ZipFile(file_path, 'w', allowZip64=True) as zip_file:
+        # Create tar file and save all directories to it
+        with tarfile.open(file_path, 'w:gz') as archive:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
-                self._add_directory_to_zip(zip_file, directory)
+                self._add_directory_to_tar(archive, directory)
                 # To get the progress bar on separate line from
                 # log messages when printing log to stdout
                 print("")
@@ -125,7 +124,7 @@ class Dinghy:
             self.bar.finish()
 
     def restore(self, filepath, directories=None):
-        """Restore files from a backup zip file"""
+        """Restore files from a backup tar file"""
         def _check_paths_before_restore(pathlist):
             """Check all files and raise exceptions if any already exists"""
             for path in pathlist:
@@ -143,8 +142,8 @@ class Dinghy:
                         )
                     )
 
-        with zipfile.ZipFile(filepath, 'r', allowZip64=True) as archive:
-            all_files = [i for i in archive.namelist()]
+        with tarfile.open(filepath, 'r:gz') as archive:
+            all_files = [i for i in archive.getnames()]
             # Only restore files under certain directories
             files_to_restore = []
             for line in all_files:
@@ -213,7 +212,7 @@ def main(arguments):
         if arguments.filename:
             backup_filename = arguments.filename
         else:
-            backup_filename = "rundeck-backup-" + partial + "{}.zip".format(
+            backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
                 datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
             )
         dinghy.backup(
