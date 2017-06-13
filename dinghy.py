@@ -144,7 +144,7 @@ class Dinghy:
                             full_path
                         )
                     )
-
+        logging.info("loading backup file...")
         with tarfile.open(filepath, 'r:gz') as archive:
             all_files = archive.getnames()
             if self.show_progress:
@@ -175,6 +175,8 @@ class Dinghy:
             for file_path in files_to_restore:
                 logging.debug("restoring file {}".format(file_path))
                 archive.extract(file_path, "/")
+                if self.show_progress:
+                    self.bar.next()
 
         if self.show_progress:
             # Close progress bar
