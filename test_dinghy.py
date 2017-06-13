@@ -300,6 +300,9 @@ class TestDinghy(unittest.TestCase):
 
         self.assertEqual(files_found, files_expected_in_restore)
 
+        # Clean up test files and directories
+        self._purge_directory(cwd + "/tmp/dinghy_test_restore")
+
     def test_restore_does_not_overwrite(self):
         """Test that existing files are not overwritten by restore"""
         cwd = os.getcwd()
@@ -474,3 +477,6 @@ class TestDinghy(unittest.TestCase):
                 files_found.append(os.path.join(root, f))
 
         self.assertEqual(files_found, files_expected_in_restore)
+
+        # Clean up directory
+        self._purge_directory(base)
