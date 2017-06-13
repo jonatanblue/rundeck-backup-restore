@@ -1,18 +1,29 @@
 #!/usr/bin/env python
 
+import logging
 import unittest
 import os
 import glob
 import shutil
 import tarfile
 import dinghy
+from dinghy import Dinghy
 
 
-# Override method that checks if rundeckd is running
-# to allow tests to run on machine that doens't have rundeck installed.
-class Dinghy(dinghy.Dinghy):
-    def _rundeck_is_running(self):
-        return False
+# Enable verbose logs for tests
+logger = logging.getLogger()
+logger.level = logging.DEBUG
+
+# Get current directory
+BASE_DIRECTORY = os.getcwd()
+
+
+# Override rundeck service check for unittests
+def rundeck_is_running(arg):
+    return False
+
+
+Dinghy._rundeck_is_running = rundeck_is_running
 
 
 class MockedDinghy(Dinghy):
@@ -134,9 +145,10 @@ class TestDinghy(unittest.TestCase):
         dinghy = Dinghy(system_directories=directories, show_progress=False)
 
         # Set up workspace
-        workpath = "/tmp/dinghy_test_add_directory_to_tar"
+        cwd = os.getcwd()
+        workpath = cwd + "/tmp/dinghy_test_add_directory_to_tar"
         self._create_dir(workpath)
-        directory_path = os.path.join(workpath, "/testdir1/subdir1")
+        directory_path = os.path.join(workpath, "testdir1/subdir1")
         self._create_dir(directory_path)
         textfile_path = os.path.join(directory_path, "somefile.txt")
         # Create file
@@ -166,25 +178,32 @@ class TestDinghy(unittest.TestCase):
 
     def test_backup(self):
         """Test creating a backup file from a set of directories"""
+        cwd = os.getcwd()
         # Set paths
         file_paths = [
-            "/tmp/dinghy_python_unittest_backup/house/room/file1.txt",
-            "/tmp/dinghy_python_unittest_backup/house/room/desk/file2.txt",
-            "/tmp/dinghy_python_unittest_backup/house/room/desk/file3.txt",
-            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/file4",
-            "/tmp/dinghy_python_unittest_backup/house/room/locker/file5.txt"
+            cwd + "/tmp/dinghy_test_backup/house/room/file1.txt",
+            cwd + "/tmp/dinghy_test_backup/house/room/desk/file2.txt",
+            cwd + "/tmp/dinghy_test_backup/house/room/desk/file3.txt",
+            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/file4",
+            cwd + "/tmp/dinghy_test_backup/house/room/locker/file5.txt"
         ]
         folder_paths_to_create = [
-            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/",
-            "/tmp/dinghy_python_unittest_backup/house/room/locker"
+            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/",
+            cwd + "/tmp/dinghy_test_backup/house/room/locker"
         ]
         directories_to_backup = [
-            "/tmp/dinghy_python_unittest_backup/house/room/desk/drawer/",
-            "/tmp/dinghy_python_unittest_backup/house/room/locker/"
+            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/",
+            cwd + "/tmp/dinghy_test_backup/house/room/locker/"
         ]
         files_expected_in_tar = [
-            "tmp/dinghy_python_unittest_backup/house/room/desk/drawer/file4",
-            "tmp/dinghy_python_unittest_backup/house/room/locker/file5.txt"
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/dinghy_test_backup/house/room/desk/drawer/file4"
+            ),
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/dinghy_test_backup/house/room/locker/file5.txt"
+            )
         ]
 
         # Set sails
@@ -203,13 +222,13 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         dinghy.backup(
-            destination_path="/tmp/dinghy_python_unittest_backup",
+            destination_path=cwd + "/tmp/dinghy_test_backup",
             filename="backup_test.tar.gz"
         )
 
         # Get list of all file paths inside tar file
         files_in_tar = self._list_files_in_tar(
-            "/tmp/dinghy_python_unittest_backup/backup_test.tar.gz")
+            cwd + "/tmp/dinghy_test_backup/backup_test.tar.gz")
 
         # tar file can't be empty
         self.assertNotEqual(len(files_in_tar), 0)
@@ -219,29 +238,30 @@ class TestDinghy(unittest.TestCase):
                          files_in_tar)
 
         # Recursively remove all directories and files used in test
-        self._purge_directory("/tmp/dinghy_python_unittest_backup")
+        self._purge_directory(cwd + "/tmp/dinghy_test_backup")
 
     def test_restore(self):
         """Test restoring a set of directories and files from a backup file"""
         # Set paths
+        cwd = os.getcwd()
         file_paths = [
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/file1.txt",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/file2.txt",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/file3.txt",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/f4",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/file5.txt"
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/file1.txt",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/file2.txt",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/file3.txt",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/f4",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/file5.txt"
         ]
         folder_paths_to_create = [
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker"
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker"
         ]
         directories_to_backup = [
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/"
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/"
         ]
         files_expected_in_restore = [
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/desk/drawer/f4",
-            "/tmp/dinghy_python_unittest_restore/hotel/lobby/locker/file5.txt"
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/f4",
+            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/file5.txt"
         ]
 
         # Set sails
@@ -260,20 +280,19 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         dinghy.backup(
-            destination_path="/tmp/dinghy_python_unittest_restore",
+            destination_path=cwd + "/tmp/dinghy_test_restore",
             filename="restore_test.tar.gz"
         )
 
         # Purge the source directory
-        self._purge_directory("/tmp/dinghy_python_unittest_restore/hotel")
+        self._purge_directory(cwd + "/tmp/dinghy_test_restore/hotel")
 
         # Restore
         dinghy.restore(
-            "/tmp/dinghy_python_unittest_restore"
-            "/restore_test.tar.gz")
+            cwd + "/tmp/dinghy_test_restore/restore_test.tar.gz")
 
         # List all directories
-        restored = "/tmp/dinghy_python_unittest_restore/hotel"
+        restored = cwd + "/tmp/dinghy_test_restore/hotel"
         files_found = []
         for root, dirs, files in os.walk(restored):
             for f in files:
@@ -283,7 +302,8 @@ class TestDinghy(unittest.TestCase):
 
     def test_restore_does_not_overwrite(self):
         """Test that existing files are not overwritten by restore"""
-        base = "/tmp/dinghy_python_unittest_restore_no_overwrite"
+        cwd = os.getcwd()
+        base = cwd + "/tmp/dinghy_python_unittest_restore_no_overwrite"
         # Set paths
         file_paths = [
             base + "/hotel/lobby/file1.txt",
@@ -359,7 +379,8 @@ class TestDinghy(unittest.TestCase):
         "partial" in the name
         """
         # Set paths
-        base = "/tmp/dinghy_python_unittest_partial_name"
+        cwd = os.getcwd()
+        base = cwd + "/tmp/dinghy_python_unittest_partial_name"
         file_paths = [
             base + "/a/b/c.txt",
             base + "/q/r.txt"
@@ -381,9 +402,9 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         args = dinghy.parse_args([
-            '--dirs=/tmp/dinghy_python_unittest_partial_name/a/b',
+            '--dirs=tmp/dinghy_python_unittest_partial_name/a/b',
             'backup',
-            '--dest', '/tmp/dinghy_python_unittest_partial_name'
+            '--dest', 'tmp/dinghy_python_unittest_partial_name'
         ])
         dinghy.main(args)
 
@@ -393,12 +414,13 @@ class TestDinghy(unittest.TestCase):
         self.assertTrue("partial" in archive_filename)
 
         # Recursively remove all directories and files used in test
-        self._purge_directory("/tmp/dinghy_python_unittest_partial_name")
+        self._purge_directory(cwd + "/tmp/dinghy_python_unittest_partial_name")
 
     def test_restore_subset_directories(self):
         """Test restoring a subset of directories"""
         # Set paths
-        base = "/tmp/dinghy_python_unittest_restore_subset"
+        cwd = os.getcwd()
+        base = cwd + "/tmp/dinghy_python_unittest_restore_subset"
         file_paths = [
             base + "/a/b/file1.txt",
             base + "/a/b/c/file2.txt",
