@@ -136,10 +136,16 @@ class Dinghy:
 
     def restore(self, filepath, directories=None):
         """Restore files from a backup tar file"""
+        def _track_progress(members):
+            for member in members:
+                # Increment progress bar
+                self.bar.next()
+                yield member
+
         def _check_paths_before_restore(pathlist):
             """Check all files and raise exceptions if any already exists"""
             for path in pathlist:
-                full_path = os.path.join("/", path)
+                full_path = os.path.join("/", path.name)
                 if (os.path.isfile(full_path)):
                     logging.error(
                         "no action taken, refusing to restore when"
@@ -154,23 +160,24 @@ class Dinghy:
                     )
         logging.info("loading backup file...")
         with tarfile.open(filepath, 'r:gz') as archive:
-            all_files = archive.getnames()
+            all_files = archive.getmembers()
             if self.show_progress:
                 # Count files in tar file
                 self.count = len(all_files)
                 logging.debug("total number of files is {}".format(self.count))
                 # Create progress bar
                 self.bar = Bar('Processing', max=self.count)
-            # Only restore files under certain directories
+            # All filenames go here
             files_to_restore = []
-            for line in all_files:
+            for tarinfo in all_files:
                 # Check each directory against all files
                 for path in self.system_directories:
                     # Remove any '/' from the start of the path
                     if path.startswith('/'):
                         path = path[1:]
-                    if line.startswith(path):
-                        files_to_restore.append(line)
+                    # Save each individual file for later checking existence
+                    if tarinfo.name.startswith(path):
+                        files_to_restore.append(tarinfo)
             # Check that files don't already exist before restoring
             logging.info(
                 "checking restore paths to avoid overwriting existing files..."
@@ -179,12 +186,16 @@ class Dinghy:
             logging.info("restoring files into directories {}".format(
                 ",".join(self.system_directories)
             ))
-            logging.debug("files_to_restore: {}".format(files_to_restore))
-            for file_path in files_to_restore:
-                logging.debug("restoring file {}".format(file_path))
-                archive.extract(file_path, "/")
-                if self.show_progress:
-                    self.bar.next()
+
+            if self.show_progress:
+                restore_members = _track_progress(files_to_restore)
+            else:
+                restore_members = files_to_restore
+            logging.debug("restoring files in {}".format(path))
+            archive.extractall(
+                path="/",
+                members=restore_members
+            )
 
         if self.show_progress:
             # Close progress bar
