@@ -60,7 +60,7 @@ class TestDinghy(unittest.TestCase):
             "/var/lib/rundeck/var/storage",   # key storage files and metadata
             "/var/rundeck/projects"           # project definitions
         ]
-        Dinghy(system_directories=directories, show_progress=True)
+        Dinghy(system_directories=directories, show_progress=False)
 
     def test_has_overlap(self):
         """Test that overlap check works"""
@@ -419,6 +419,7 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         args = dinghy.parse_args([
+            '--no-progress',
             '--dirs=' + cwd + '/tmp/dinghy_python_unittest_partial_name/a/b',
             'backup',
             '--dest', 'tmp/dinghy_python_unittest_partial_name'
@@ -465,6 +466,7 @@ class TestDinghy(unittest.TestCase):
 
         # Create backup
         args = dinghy.parse_args([
+            '--no-progress',
             '--dirs=' + base + '/a/b',
             'backup',
             '--dest', base,
@@ -477,6 +479,7 @@ class TestDinghy(unittest.TestCase):
 
         # Restore
         args = dinghy.parse_args([
+            '--no-progress',
             '--dirs=' + base + '/a/b/c/e',
             'restore',
             '--file=' + base + '/test.tar.gz'
