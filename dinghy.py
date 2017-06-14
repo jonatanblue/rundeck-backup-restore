@@ -134,6 +134,8 @@ class Dinghy:
             # Close progress bar
             self.bar.finish()
 
+        logging.info("backup complete")
+
     def restore(self, filepath, directories=None):
         """Restore files from a backup tar file"""
         def _track_progress(members):
@@ -196,6 +198,12 @@ class Dinghy:
                 path="/",
                 members=restore_members
             )
+            if self.show_progress:
+                # Make progress bar play nice with log messages
+                print("")
+            logging.info("restore complete: {} files".format(
+                len(files_to_restore)
+            ))
 
         if self.show_progress:
             # Close progress bar
