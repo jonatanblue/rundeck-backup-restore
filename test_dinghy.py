@@ -9,7 +9,6 @@ import tarfile
 import dinghy
 from dinghy import Dinghy
 
-
 # Enable verbose logs for tests
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -115,7 +114,6 @@ class TestDinghy(unittest.TestCase):
                 system_directories=contains_relative_paths,
                 show_progress=False
             )
-
 
     def test_raises_exception_on_overlapping_dirs(self):
         """Test that exception is raised for overlapping dirs
@@ -316,6 +314,65 @@ class TestDinghy(unittest.TestCase):
 
         # Clean up test files and directories
         self._purge_directory(cwd + "/tmp/dinghy_test_restore")
+
+    def test_restore_check_content(self):
+        """Test restoring a file and check contents"""
+        # Set paths
+        cwd = os.getcwd()
+        file_paths = [
+            cwd + "/tmp/dinghy_test_r_check/a/b/file1.txt",
+            cwd + "/tmp/dinghy_test_r_check/a/b/c/file2.txt",
+            cwd + "/tmp/dinghy_test_r_check/a/b/c/file3.txt",
+            cwd + "/tmp/dinghy_test_r_check/a/b/c/e/f4",
+            cwd + "/tmp/dinghy_test_r_check/a/b/d/file5.txt"
+        ]
+        folder_paths_to_create = [
+            cwd + "/tmp/dinghy_test_r_check/a/b/c/e/",
+            cwd + "/tmp/dinghy_test_r_check/a/b/d"
+        ]
+        directories_to_backup = [
+            cwd + "/tmp/dinghy_test_r_check/a/b/d/"
+        ]
+        file_expected_in_restore = os.path.join(
+            cwd + "/tmp/dinghy_test_r_check/a/b/d/file5.txt"
+        )
+
+        # Set sails
+        dinghy = Dinghy(system_directories=directories_to_backup,
+                        show_progress=False)
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("For Gondor!\n")
+
+        # Create backup
+        dinghy.backup(
+            destination_path=cwd + "/tmp/dinghy_test_r_check",
+            filename="restore_test.tar.gz"
+        )
+
+        # Purge the source directory
+        self._purge_directory(cwd + "/tmp/dinghy_test_r_check/a")
+
+        # Restore
+        dinghy.restore(
+            cwd + "/tmp/dinghy_test_r_check/restore_test.tar.gz")
+
+        # Get file contents
+        with open(file_expected_in_restore, 'r') as restored_file:
+            content = restored_file.read()
+            logging.debug("content " + content)
+
+        self.assertEqual(content, "For Gondor!\n")
+
+        # Clean up test files and directories
+        self._purge_directory(cwd + "/tmp/dinghy_test_r_check")
 
     def test_restore_does_not_overwrite(self):
         """Test that existing files are not overwritten by restore"""
