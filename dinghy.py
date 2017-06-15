@@ -92,9 +92,19 @@ class Dinghy:
             logging.debug("directory: {}".format(root))
             for f in files:
                 logging.debug("file: {}".format(f))
-                tar_handle.add(os.path.join(root, f))
+                file_path = os.path.join(root, f)
+                # Add to tar file
+                tar_handle.add(file_path)
+                # Increment progress bar
                 if self.show_progress:
                     self.bar.next()
+
+    def _track_progress(self, members):
+        """Helps track progress when using progress bar in loop"""
+        for member in members:
+            # Increment progress bar
+            self.bar.next()
+            yield member
 
     def backup(self, destination_path, filename):
         """Create a backup file"""
@@ -138,12 +148,6 @@ class Dinghy:
 
     def restore(self, filepath, directories=None):
         """Restore files from a backup tar file"""
-        def _track_progress(members):
-            for member in members:
-                # Increment progress bar
-                self.bar.next()
-                yield member
-
         def _check_paths_before_restore(pathlist):
             """Check all files and raise exceptions if any already exists"""
             for path in pathlist:
@@ -190,10 +194,12 @@ class Dinghy:
             ))
 
             if self.show_progress:
-                restore_members = _track_progress(files_to_restore)
+                restore_members = self._track_progress(files_to_restore)
             else:
                 restore_members = files_to_restore
-            logging.debug("restoring files in {}".format(path))
+            logging.debug(
+                "restoring files in {}".format(self.system_directories)
+            )
             archive.extractall(
                 path="/",
                 members=restore_members
