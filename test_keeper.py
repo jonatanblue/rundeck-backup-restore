@@ -6,8 +6,8 @@ import os
 import glob
 import shutil
 import tarfile
-import dinghy
-from dinghy import Dinghy
+import keeper
+from keeper import Keeper
 
 # Enable verbose logs for tests
 logger = logging.getLogger()
@@ -22,16 +22,16 @@ def rundeck_is_running(arg):
     return False
 
 
-Dinghy._rundeck_is_running = rundeck_is_running
+Keeper._rundeck_is_running = rundeck_is_running
 
 
-class MockedDinghy(Dinghy):
+class MockedKeeper(Keeper):
     def __init__(self, *args):
         pass
 
 
-class TestDinghy(unittest.TestCase):
-    """Tests for `dinghy.py`"""
+class TestKeeper(unittest.TestCase):
+    """Tests for `keeper.py`"""
     def _create_dir(self, path):
         """Creates directory"""
         if not os.path.exists(path):
@@ -51,7 +51,7 @@ class TestDinghy(unittest.TestCase):
             return archive.getnames()
 
     def test_instantiating(self):
-        """Test that Dinghy class can be instantiated"""
+        """Test that Keeper class can be instantiated"""
         directories = [
             "/var/lib/rundeck/data",          # database
             "/var/lib/rundeck/logs",          # execution logs (by far biggest)
@@ -59,7 +59,7 @@ class TestDinghy(unittest.TestCase):
             "/var/lib/rundeck/var/storage",   # key storage files and metadata
             "/var/rundeck/projects"           # project definitions
         ]
-        Dinghy(system_directories=directories, show_progress=False)
+        Keeper(system_directories=directories, show_progress=False)
 
     def test_has_overlap(self):
         """Test that overlap check works"""
@@ -67,8 +67,8 @@ class TestDinghy(unittest.TestCase):
             "/tmp/a/b",
             "/tmp/a"
         ]
-        dinghy = MockedDinghy()
-        self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
+        keeper = MockedKeeper()
+        self.assertTrue(keeper._has_duplicate_or_overlap(overlapping_dirs))
 
     def test_has_overlap_reverse(self):
         """Test that overlap check works"""
@@ -76,8 +76,8 @@ class TestDinghy(unittest.TestCase):
             "/tmp/a",
             "/tmp/a/b"
         ]
-        dinghy = MockedDinghy()
-        self.assertTrue(dinghy._has_duplicate_or_overlap(overlapping_dirs))
+        keeper = MockedKeeper()
+        self.assertTrue(keeper._has_duplicate_or_overlap(overlapping_dirs))
 
     def test_has_duplicate(self):
         """Test that duplicate check works"""
@@ -85,9 +85,9 @@ class TestDinghy(unittest.TestCase):
             "/tmp/a/b",
             "/tmp/a/b"
         ]
-        dinghy = MockedDinghy()
+        keeper = MockedKeeper()
 
-        self.assertTrue(dinghy._has_duplicate_or_overlap(duplicate_dirs))
+        self.assertTrue(keeper._has_duplicate_or_overlap(duplicate_dirs))
 
     def test_valid_path_list(self):
         """Test that a valid path list is valid according to check"""
@@ -98,9 +98,9 @@ class TestDinghy(unittest.TestCase):
             "/var/troll"
         ]
 
-        dinghy = MockedDinghy()
+        keeper = MockedKeeper()
 
-        self.assertFalse(dinghy._has_duplicate_or_overlap(valid_dirs))
+        self.assertFalse(keeper._has_duplicate_or_overlap(valid_dirs))
 
     def test_raises_exception_on_relative_paths(self):
         """Test that relative paths raise an exception"""
@@ -110,7 +110,7 @@ class TestDinghy(unittest.TestCase):
             "/this/is/valid/though"
         ]
         with self.assertRaises(Exception):
-            Dinghy(
+            Keeper(
                 system_directories=contains_relative_paths,
                 show_progress=False
             )
@@ -123,12 +123,12 @@ class TestDinghy(unittest.TestCase):
         """
         # Set bad directories
         bad_directories = [
-            "/tmp/dinghy_python_unittest_raises/a/b/c",
-            "/tmp/dinghy_python_unittest_raises/a/b"
+            "/tmp/keeper_python_unittest_raises/a/b/c",
+            "/tmp/keeper_python_unittest_raises/a/b"
         ]
         # Set sails
         with self.assertRaises(Exception):
-            Dinghy(system_directories=bad_directories, show_progress=False)
+            Keeper(system_directories=bad_directories, show_progress=False)
 
     def test_raises_exception_on_overlapping_dirs_reversed(self):
         """Test that exception is raised for overlapping dirs.
@@ -137,53 +137,53 @@ class TestDinghy(unittest.TestCase):
         """
         # Set bad directories
         bad_directories = [
-            "/tmp/dinghy_python_unittest_raises/a/b",
-            "/tmp/dinghy_python_unittest_raises/a/b/c"
+            "/tmp/keeper_python_unittest_raises/a/b",
+            "/tmp/keeper_python_unittest_raises/a/b/c"
         ]
         # Set sails
         with self.assertRaises(Exception):
-            Dinghy(system_directories=bad_directories, show_progress=False)
+            Keeper(system_directories=bad_directories, show_progress=False)
 
     def test_backup(self):
         """Test creating a backup file from a set of directories"""
         cwd = os.getcwd()
         # Set paths
         file_paths = [
-            cwd + "/tmp/dinghy_test_backup/house/room/file1.txt",
-            cwd + "/tmp/dinghy_test_backup/house/room/desk/file2.txt",
-            cwd + "/tmp/dinghy_test_backup/house/room/desk/file3.txt",
-            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/file4",
-            cwd + "/tmp/dinghy_test_backup/house/room/locker/file5.txt"
+            cwd + "/tmp/keeper_test_backup/house/room/file1.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/file2.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/file3.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/file4",
+            cwd + "/tmp/keeper_test_backup/house/room/locker/file5.txt"
         ]
         folder_paths_to_create = [
-            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/",
-            cwd + "/tmp/dinghy_test_backup/house/room/locker"
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/",
+            cwd + "/tmp/keeper_test_backup/house/room/locker"
         ]
         directories_to_backup = [
-            cwd + "/tmp/dinghy_test_backup/house/room/desk/drawer/",
-            cwd + "/tmp/dinghy_test_backup/house/room/locker/"
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/",
+            cwd + "/tmp/keeper_test_backup/house/room/locker/"
         ]
         files_expected_in_tar = [
             os.path.join(
                 cwd.strip("/"),
-                "tmp/dinghy_test_backup/house/room/desk/drawer"
+                "tmp/keeper_test_backup/house/room/desk/drawer"
             ),
             os.path.join(
                 cwd.strip("/"),
-                "tmp/dinghy_test_backup/house/room/desk/drawer/file4"
+                "tmp/keeper_test_backup/house/room/desk/drawer/file4"
             ),
             os.path.join(
                 cwd.strip("/"),
-                "tmp/dinghy_test_backup/house/room/locker"
+                "tmp/keeper_test_backup/house/room/locker"
             ),
             os.path.join(
                 cwd.strip("/"),
-                "tmp/dinghy_test_backup/house/room/locker/file5.txt"
+                "tmp/keeper_test_backup/house/room/locker/file5.txt"
             )
         ]
 
         # Set sails
-        dinghy = Dinghy(system_directories=directories_to_backup,
+        keeper = Keeper(system_directories=directories_to_backup,
                         show_progress=False)
 
         # Create all directories
@@ -197,14 +197,14 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        dinghy.backup(
-            destination_path=cwd + "/tmp/dinghy_test_backup",
+        keeper.backup(
+            destination_path=cwd + "/tmp/keeper_test_backup",
             filename="backup_test.tar.gz"
         )
 
         # Get list of all file paths inside tar file
         files_in_tar = self._list_files_in_tar(
-            cwd + "/tmp/dinghy_test_backup/backup_test.tar.gz")
+            cwd + "/tmp/keeper_test_backup/backup_test.tar.gz")
 
         # tar file can't be empty
         self.assertNotEqual(len(files_in_tar), 0)
@@ -214,34 +214,34 @@ class TestDinghy(unittest.TestCase):
                          files_in_tar)
 
         # Recursively remove all directories and files used in test
-        self._purge_directory(cwd + "/tmp/dinghy_test_backup")
+        self._purge_directory(cwd + "/tmp/keeper_test_backup")
 
     def test_restore(self):
         """Test restoring a set of directories and files from a backup file"""
         # Set paths
         cwd = os.getcwd()
         file_paths = [
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/file1.txt",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/file2.txt",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/file3.txt",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/f4",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/file5.txt"
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/file1.txt",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/file2.txt",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/file3.txt",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/f4",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/file5.txt"
         ]
         folder_paths_to_create = [
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker"
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker"
         ]
         directories_to_backup = [
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/"
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/"
         ]
         files_expected_in_restore = [
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/desk/drawer/f4",
-            cwd + "/tmp/dinghy_test_restore/hotel/lobby/locker/file5.txt"
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/f4",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/file5.txt"
         ]
 
         # Set sails
-        dinghy = Dinghy(system_directories=directories_to_backup,
+        keeper = Keeper(system_directories=directories_to_backup,
                         show_progress=False)
 
         # Create all directories
@@ -255,20 +255,20 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        dinghy.backup(
-            destination_path=cwd + "/tmp/dinghy_test_restore",
+        keeper.backup(
+            destination_path=cwd + "/tmp/keeper_test_restore",
             filename="restore_test.tar.gz"
         )
 
         # Purge the source directory
-        self._purge_directory(cwd + "/tmp/dinghy_test_restore/hotel")
+        self._purge_directory(cwd + "/tmp/keeper_test_restore/hotel")
 
         # Restore
-        dinghy.restore(
-            cwd + "/tmp/dinghy_test_restore/restore_test.tar.gz")
+        keeper.restore(
+            cwd + "/tmp/keeper_test_restore/restore_test.tar.gz")
 
         # List all directories
-        restored = cwd + "/tmp/dinghy_test_restore/hotel"
+        restored = cwd + "/tmp/keeper_test_restore/hotel"
         files_found = []
         for root, dirs, files in os.walk(restored):
             for f in files:
@@ -277,32 +277,32 @@ class TestDinghy(unittest.TestCase):
         self.assertEqual(files_found, files_expected_in_restore)
 
         # Clean up test files and directories
-        self._purge_directory(cwd + "/tmp/dinghy_test_restore")
+        self._purge_directory(cwd + "/tmp/keeper_test_restore")
 
     def test_restore_check_content(self):
         """Test restoring a file and check contents"""
         # Set paths
         cwd = os.getcwd()
         file_paths = [
-            cwd + "/tmp/dinghy_test_r_check/a/b/file1.txt",
-            cwd + "/tmp/dinghy_test_r_check/a/b/c/file2.txt",
-            cwd + "/tmp/dinghy_test_r_check/a/b/c/file3.txt",
-            cwd + "/tmp/dinghy_test_r_check/a/b/c/e/f4",
-            cwd + "/tmp/dinghy_test_r_check/a/b/d/file5.txt"
+            cwd + "/tmp/keeper_test_r_check/a/b/file1.txt",
+            cwd + "/tmp/keeper_test_r_check/a/b/c/file2.txt",
+            cwd + "/tmp/keeper_test_r_check/a/b/c/file3.txt",
+            cwd + "/tmp/keeper_test_r_check/a/b/c/e/f4",
+            cwd + "/tmp/keeper_test_r_check/a/b/d/file5.txt"
         ]
         folder_paths_to_create = [
-            cwd + "/tmp/dinghy_test_r_check/a/b/c/e/",
-            cwd + "/tmp/dinghy_test_r_check/a/b/d"
+            cwd + "/tmp/keeper_test_r_check/a/b/c/e/",
+            cwd + "/tmp/keeper_test_r_check/a/b/d"
         ]
         directories_to_backup = [
-            cwd + "/tmp/dinghy_test_r_check/a/b/d/"
+            cwd + "/tmp/keeper_test_r_check/a/b/d/"
         ]
         file_expected_in_restore = os.path.join(
-            cwd + "/tmp/dinghy_test_r_check/a/b/d/file5.txt"
+            cwd + "/tmp/keeper_test_r_check/a/b/d/file5.txt"
         )
 
         # Set sails
-        dinghy = Dinghy(system_directories=directories_to_backup,
+        keeper = Keeper(system_directories=directories_to_backup,
                         show_progress=False)
 
         # Create all directories
@@ -316,17 +316,17 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        dinghy.backup(
-            destination_path=cwd + "/tmp/dinghy_test_r_check",
+        keeper.backup(
+            destination_path=cwd + "/tmp/keeper_test_r_check",
             filename="restore_test.tar.gz"
         )
 
         # Purge the source directory
-        self._purge_directory(cwd + "/tmp/dinghy_test_r_check/a")
+        self._purge_directory(cwd + "/tmp/keeper_test_r_check/a")
 
         # Restore
-        dinghy.restore(
-            cwd + "/tmp/dinghy_test_r_check/restore_test.tar.gz")
+        keeper.restore(
+            cwd + "/tmp/keeper_test_r_check/restore_test.tar.gz")
 
         # Get file contents
         with open(file_expected_in_restore, 'r') as restored_file:
@@ -336,12 +336,12 @@ class TestDinghy(unittest.TestCase):
         self.assertEqual(content, "For Gondor!\n")
 
         # Clean up test files and directories
-        self._purge_directory(cwd + "/tmp/dinghy_test_r_check")
+        self._purge_directory(cwd + "/tmp/keeper_test_r_check")
 
     def test_restore_does_not_overwrite(self):
         """Test that existing files are not overwritten by restore"""
         cwd = os.getcwd()
-        base = cwd + "/tmp/dinghy_python_unittest_restore_no_overwrite"
+        base = cwd + "/tmp/keeper_python_unittest_restore_no_overwrite"
         # Set paths
         file_paths = [
             base + "/hotel/lobby/file1.txt",
@@ -364,7 +364,7 @@ class TestDinghy(unittest.TestCase):
         ]
 
         # Set sails
-        dinghy = Dinghy(system_directories=directories_to_backup,
+        keeper = Keeper(system_directories=directories_to_backup,
                         show_progress=False)
 
         # Create all directories
@@ -378,7 +378,7 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        dinghy.backup(
+        keeper.backup(
             destination_path=base,
             filename="restore_test.tar.gz"
         )
@@ -390,7 +390,7 @@ class TestDinghy(unittest.TestCase):
 
         # Restore should raise exception on existing file
         with self.assertRaises(Exception):
-            dinghy.restore(base + "/restore_test.tar.gz")
+            keeper.restore(base + "/restore_test.tar.gz")
 
         # Get file contents
         files_content = []
@@ -418,7 +418,7 @@ class TestDinghy(unittest.TestCase):
         """
         # Set paths
         cwd = os.getcwd()
-        base = cwd + "/tmp/dinghy_python_unittest_partial_name"
+        base = cwd + "/tmp/keeper_python_unittest_partial_name"
         file_paths = [
             base + "/a/b/c.txt",
             base + "/q/r.txt"
@@ -439,13 +439,13 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        args = dinghy.parse_args([
+        args = keeper.parse_args([
             '--no-progress',
-            '--dirs=' + cwd + '/tmp/dinghy_python_unittest_partial_name/a/b',
+            '--dirs=' + cwd + '/tmp/keeper_python_unittest_partial_name/a/b',
             'backup',
-            '--dest', 'tmp/dinghy_python_unittest_partial_name'
+            '--dest', 'tmp/keeper_python_unittest_partial_name'
         ])
-        dinghy.main(args)
+        keeper.main(args)
 
         # Get filename
         archive_filename = glob.glob(base + "/*.tar.gz")[0]
@@ -453,13 +453,13 @@ class TestDinghy(unittest.TestCase):
         self.assertTrue("partial" in archive_filename)
 
         # Recursively remove all directories and files used in test
-        self._purge_directory(cwd + "/tmp/dinghy_python_unittest_partial_name")
+        self._purge_directory(cwd + "/tmp/keeper_python_unittest_partial_name")
 
     def test_restore_subset_directories(self):
         """Test restoring a subset of directories"""
         # Set paths
         cwd = os.getcwd()
-        base = cwd + "/tmp/dinghy_python_unittest_restore_subset"
+        base = cwd + "/tmp/keeper_python_unittest_restore_subset"
         file_paths = [
             base + "/a/b/file1.txt",
             base + "/a/b/c/file2.txt",
@@ -486,26 +486,26 @@ class TestDinghy(unittest.TestCase):
                 file_handle.write("For Gondor!\n")
 
         # Create backup
-        args = dinghy.parse_args([
+        args = keeper.parse_args([
             '--no-progress',
             '--dirs=' + base + '/a/b',
             'backup',
             '--dest', base,
             '--filename', "test.tar.gz"
         ])
-        dinghy.main(args)
+        keeper.main(args)
 
         # Purge the source directory
         self._purge_directory(base + "/a")
 
         # Restore
-        args = dinghy.parse_args([
+        args = keeper.parse_args([
             '--no-progress',
             '--dirs=' + base + '/a/b/c/e',
             'restore',
             '--file=' + base + '/test.tar.gz'
         ])
-        dinghy.main(args)
+        keeper.main(args)
 
         # List all directories
         restored = base + "/a"

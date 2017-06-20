@@ -10,7 +10,7 @@ from datetime import datetime
 from progress.bar import Bar
 
 
-class Dinghy:
+class Keeper:
 
     def __init__(self, system_directories=None, show_progress=False):
         # Refuse to do anything if RunDeck is running
@@ -242,7 +242,7 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    dinghy = Dinghy(system_directories=system_directories,
+    keeper = keeper(system_directories=system_directories,
                     show_progress=show_progress)
 
     if parser_name == "backup":
@@ -253,17 +253,17 @@ def main(arguments):
             backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
                 datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
             )
-        dinghy.backup(
+        keeper.backup(
             destination_path=arguments.dest,
             filename=backup_filename)
     elif parser_name == "restore":
-        dinghy.restore(
+        keeper.restore(
             filepath=arguments.file)
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
-        description='dinghy: helper for backup and restore of RunDeck')
+        description='keeper: helper for backup and restore of RunDeck')
     parser.add_argument(
         '--debug',
         '-d',
