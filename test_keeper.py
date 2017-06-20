@@ -156,17 +156,17 @@ class TestKeeper(unittest.TestCase):
             cwd + "/tmp/keeper_test_backup/house/room/locker/file5.txt"
         ]
         folder_paths_to_create = [
-            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer",
             cwd + "/tmp/keeper_test_backup/house/room/locker"
         ]
         directories_to_backup = [
-            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/",
-            cwd + "/tmp/keeper_test_backup/house/room/locker/"
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer",
+            cwd + "/tmp/keeper_test_backup/house/room/locker"
         ]
         files_expected_in_tar = [
             os.path.join(
                 cwd.strip("/"),
-                "tmp/keeper_test_backup/house/room/desk/drawer/"
+                "tmp/keeper_test_backup/house/room/desk/drawer"
             ),
             os.path.join(
                 cwd.strip("/"),
@@ -208,6 +208,15 @@ class TestKeeper(unittest.TestCase):
 
         # tar file can't be empty
         self.assertNotEqual(len(files_in_tar), 0)
+
+        # Normpath the paths
+        # NOTE: I don't know why this is necessary
+        files_expected_in_tar = [
+            os.path.normpath(p) for p in files_expected_in_tar
+        ]
+        files_in_tar = [
+            os.path.normpath(p) for p in files_in_tar
+        ]
 
         # Compare tar file and list of files
         self.assertEqual(files_expected_in_tar,
