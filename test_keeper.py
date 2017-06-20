@@ -166,7 +166,7 @@ class TestKeeper(unittest.TestCase):
         files_expected_in_tar = [
             os.path.join(
                 cwd.strip("/"),
-                "tmp/keeper_test_backup/house/room/desk/drawer"
+                "tmp/keeper_test_backup/house/room/desk/drawer/"
             ),
             os.path.join(
                 cwd.strip("/"),
