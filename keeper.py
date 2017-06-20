@@ -242,7 +242,7 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    keeper = keeper(system_directories=system_directories,
+    keeper = Keeper(system_directories=system_directories,
                     show_progress=show_progress)
 
     if parser_name == "backup":
