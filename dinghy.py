@@ -86,19 +86,6 @@ class Dinghy:
         else:
             return False
 
-    def _add_directory_to_tar(self, tar_handle, path):
-        """Add a directory to a tar file"""
-        for root, dirs, files in os.walk(path):
-            logging.debug("directory: {}".format(root))
-            for f in files:
-                logging.debug("file: {}".format(f))
-                file_path = os.path.join(root, f)
-                # Add to tar file
-                tar_handle.add(file_path)
-                # Increment progress bar
-                if self.show_progress:
-                    self.bar.next()
-
     def _track_progress(self, members):
         """Helps track progress when using progress bar in loop"""
         for member in members:
@@ -135,7 +122,7 @@ class Dinghy:
         with tarfile.open(file_path, 'w:gz') as archive:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
-                self._add_directory_to_tar(archive, directory)
+                archive.add(directory)
                 # To get the progress bar on separate line from
                 # log messages when printing log to stdout
                 print("")
@@ -167,12 +154,6 @@ class Dinghy:
         logging.info("loading backup file...")
         with tarfile.open(filepath, 'r:gz') as archive:
             all_files = archive.getmembers()
-            if self.show_progress:
-                # Count files in tar file
-                self.count = len(all_files)
-                logging.debug("total number of files is {}".format(self.count))
-                # Create progress bar
-                self.bar = Bar('Processing', max=self.count)
             # All filenames go here
             files_to_restore = []
             for tarinfo in all_files:
@@ -184,6 +165,7 @@ class Dinghy:
                     # Save each individual file for later checking existence
                     if tarinfo.name.startswith(path):
                         files_to_restore.append(tarinfo)
+                        logging.debug("path: " + path)
             # Check that files don't already exist before restoring
             logging.info(
                 "checking restore paths to avoid overwriting existing files..."
@@ -194,6 +176,11 @@ class Dinghy:
             ))
 
             if self.show_progress:
+                # Count files in tar file
+                self.count = len(files_to_restore)
+                logging.debug("total number of files is {}".format(self.count))
+                # Create progress bar
+                self.bar = Bar('Processing', max=self.count)
                 restore_members = self._track_progress(files_to_restore)
             else:
                 restore_members = files_to_restore

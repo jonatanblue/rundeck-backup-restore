@@ -144,50 +144,6 @@ class TestDinghy(unittest.TestCase):
         with self.assertRaises(Exception):
             Dinghy(system_directories=bad_directories, show_progress=False)
 
-    def test_add_directory_to_tar(self):
-        """Test that a directory can be added to a tar file"""
-        # Set sails
-        directories = [
-            "/var/lib/rundeck/data",          # database
-            "/var/lib/rundeck/logs",          # execution logs (by far biggest)
-            "/var/lib/rundeck/.ssh",          # ssh keys
-            "/var/lib/rundeck/var/storage",   # key storage files and metadata
-            "/var/rundeck/projects"           # project definitions
-        ]
-        dinghy = Dinghy(system_directories=directories, show_progress=False)
-
-        # Set up workspace
-        cwd = os.getcwd()
-        workpath = cwd + "/tmp/dinghy_test_add_directory_to_tar"
-        self._create_dir(workpath)
-        directory_path = os.path.join(workpath, "testdir1/subdir1")
-        self._create_dir(directory_path)
-        textfile_path = os.path.join(directory_path, "somefile.txt")
-        # Create file
-        with open(textfile_path, "w") as textfile:
-            textfile.write("lorem ipsum")
-        filepath = os.path.join(workpath, "test1.tar.gz")
-
-        # Create tar file
-        with tarfile.open(filepath, 'w:gz') as archive:
-            # Add directory
-            dinghy._add_directory_to_tar(archive, directory_path)
-
-        file_in_tar = self._list_files_in_tar(filepath)[0]
-
-        expected = textfile_path
-        actual = os.path.join("/", file_in_tar)
-
-        # Assert that directory exists in tar file
-        self.assertEqual(
-            actual,
-            expected,
-            msg="actual={},expected={}".format(
-                actual,
-                expected))
-        # Clean up
-        self._purge_directory(workpath)
-
     def test_backup(self):
         """Test creating a backup file from a set of directories"""
         cwd = os.getcwd()
@@ -210,7 +166,15 @@ class TestDinghy(unittest.TestCase):
         files_expected_in_tar = [
             os.path.join(
                 cwd.strip("/"),
+                "tmp/dinghy_test_backup/house/room/desk/drawer"
+            ),
+            os.path.join(
+                cwd.strip("/"),
                 "tmp/dinghy_test_backup/house/room/desk/drawer/file4"
+            ),
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/dinghy_test_backup/house/room/locker"
             ),
             os.path.join(
                 cwd.strip("/"),
