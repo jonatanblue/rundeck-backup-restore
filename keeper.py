@@ -119,7 +119,7 @@ class Keeper:
             self.bar = Bar('Processing', max=self.count)
 
         # Create tar file and save all directories to it
-        with tarfile.open(file_path, 'w:gz') as archive:
+        with tarfile.open(file_path, mode='w:gz', dereference=True) as archive:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 archive.add(directory)
