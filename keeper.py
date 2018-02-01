@@ -7,7 +7,6 @@ import sys
 import logging
 import tarfile
 from datetime import datetime
-from progress.bar import Bar
 
 
 class Keeper:
@@ -53,6 +52,7 @@ class Keeper:
     def _has_duplicate_or_overlap(self, paths):
         """Return true if list of paths has duplicate or overlapping paths"""
         if len(paths) > 1:
+            # TODO: This seems inefficient; see if there's a simpler deduper possible
             first = paths[0]
             remaining = paths[1:]
             for item in remaining:
@@ -86,13 +86,6 @@ class Keeper:
         else:
             return False
 
-    def _track_progress(self, members):
-        """Helps track progress when using progress bar in loop"""
-        for member in members:
-            # Increment progress bar
-            self.bar.next()
-            yield member
-
     def backup(self, destination_path, filename):
         """Create a backup file"""
         # Start message
@@ -107,17 +100,6 @@ class Keeper:
         file_path = os.path.join(destination_path, filename)
         logging.debug("using full backup path {}".format(file_path))
 
-        if self.show_progress:
-            # Count files in all directories
-            logging.info("counting files...")
-            for directory in self.system_directories:
-                for root, dirs, files in os.walk(directory):
-                    for f in files:
-                        self.count += 1
-            logging.debug("total number of files is {}".format(self.count))
-            # Create progress bar
-            self.bar = Bar('Processing', max=self.count)
-
         # Create tar file and save all directories to it
         with tarfile.open(file_path, mode='w:gz', dereference=True) as archive:
             for directory in self.system_directories:
@@ -126,10 +108,6 @@ class Keeper:
                 # To get the progress bar on separate line from
                 # log messages when printing log to stdout
                 print("")
-
-        if self.show_progress:
-            # Close progress bar
-            self.bar.finish()
 
         logging.info("backup complete")
 
@@ -175,15 +153,8 @@ class Keeper:
                 ",".join(self.system_directories)
             ))
 
-            if self.show_progress:
-                # Count files in tar file
-                self.count = len(files_to_restore)
-                logging.debug("total number of files is {}".format(self.count))
-                # Create progress bar
-                self.bar = Bar('Processing', max=self.count)
-                restore_members = self._track_progress(files_to_restore)
-            else:
-                restore_members = files_to_restore
+
+            restore_members = files_to_restore
             logging.debug(
                 "restoring files in {}".format(self.system_directories)
             )
