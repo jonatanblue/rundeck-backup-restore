@@ -73,14 +73,14 @@ class Keeper:
                 universal_newlines=True
             )
         except subprocess.CalledProcessError as error:
-            if "rundeckd is not running" not in error.output:
+            if "rundeckd" not in error.output:
                 raise Exception(
                     "error running service command, "
                     "is rundeckd installed on this machine?"
                 )
             else:
                 status = error.output
-        if "rundeckd is running" in status:
+        if "rundeckd" in status and "running" in status:
             return True
         else:
             return False
@@ -91,11 +91,10 @@ class Keeper:
         logging.debug("starting backup")
 
         # Fail if backup dir is not found
-        # ToDo: Create the directory if not there
         if not os.path.exists(destination_path):
-            logging.error("backup directory {} not found".format(
+            logging.debug("backup directory {} not found; creating now".format(
                 destination_path))
-            raise Exception("could not find backup directory")
+            os.makedirs(destination_path)
 
         file_path = os.path.join(destination_path, filename)
         logging.debug("using full backup path {}".format(file_path))
