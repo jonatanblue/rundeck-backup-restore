@@ -198,22 +198,25 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    keeper = Keeper(system_directories=system_directories)
+    try:
+        keeper = Keeper(system_directories=system_directories)
 
-    if parser_name == "backup":
-        # Set the name of the backup file to be created
-        if arguments.filename:
-            backup_filename = arguments.filename
-        else:
-            backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
-                datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
-            )
-        keeper.backup(
-            destination_path=arguments.dest,
-            filename=backup_filename)
-    elif parser_name == "restore":
-        keeper.restore(
-            filepath=arguments.file)
+        if parser_name == "backup":
+            # Set the name of the backup file to be created
+            if arguments.filename:
+                backup_filename = arguments.filename
+            else:
+                backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
+                    datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
+                )
+            keeper.backup(
+                destination_path=arguments.dest,
+                filename=backup_filename)
+        elif parser_name == "restore":
+            keeper.restore(
+                filepath=arguments.file)
+    except Exception as e:
+        print(e)
 
 
 def parse_args(args):
