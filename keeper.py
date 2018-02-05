@@ -11,7 +11,7 @@ from datetime import datetime
 
 class Keeper:
 
-    def __init__(self, system_directories=None, show_progress=False):
+    def __init__(self, system_directories=None):
         # Refuse to do anything if RunDeck is running
         # This is best practice according to the docs:
         # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
@@ -22,7 +22,6 @@ class Keeper:
 
         self.count = 0
         self.bar = None
-        self.show_progress = show_progress
         # Directories to include in backup and restore
         if system_directories is None:
             # Default is to backup and restore all directories
@@ -92,6 +91,7 @@ class Keeper:
         logging.debug("starting backup")
 
         # Fail if backup dir is not found
+        # ToDo: Create the directory if not there
         if not os.path.exists(destination_path):
             logging.error("backup directory {} not found".format(
                 destination_path))
@@ -105,8 +105,6 @@ class Keeper:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 archive.add(directory)
-                # To get the progress bar on separate line from
-                # log messages when printing log to stdout
                 print("")
 
         logging.info("backup complete")
@@ -153,7 +151,6 @@ class Keeper:
                 ",".join(self.system_directories)
             ))
 
-
             restore_members = files_to_restore
             logging.debug(
                 "restoring files in {}".format(self.system_directories)
@@ -162,26 +159,15 @@ class Keeper:
                 path="/",
                 members=restore_members
             )
-            if self.show_progress:
-                # Make progress bar play nice with log messages
-                print("")
             logging.info("restore complete: {} files".format(
                 len(files_to_restore)
             ))
-
-        if self.show_progress:
-            # Close progress bar
-            self.bar.finish()
 
 
 def main(arguments):
     # Gather arguments
     parser_name = arguments.subparser_name
     debug_mode = arguments.debug
-    if arguments.no_progress:
-        show_progress = False
-    else:
-        show_progress = True
 
     # Enable debug logging if flag is set
     if debug_mode:
@@ -213,8 +199,7 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    keeper = Keeper(system_directories=system_directories,
-                    show_progress=show_progress)
+    keeper = Keeper(system_directories=system_directories)
 
     if parser_name == "backup":
         # Set the name of the backup file to be created
@@ -240,10 +225,6 @@ def parse_args(args):
         '-d',
         action='store_true',
         help='enable debug logging')
-    parser.add_argument(
-        '--no-progress',
-        action='store_true',
-        help='disable progress bar')
     parser.add_argument(
         '--dirs',
         type=str,
