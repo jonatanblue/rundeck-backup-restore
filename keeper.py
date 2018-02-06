@@ -26,6 +26,7 @@ class Keeper:
         if system_directories is None:
             # Default is to backup and restore all directories
             self.system_directories = [
+                # ToDo: add /etc/rundeck/realm.properties for user auth?
                 "/var/lib/rundeck/data",          # database
                 "/var/lib/rundeck/logs",          # execution logs (biggest)
                 "/var/lib/rundeck/.ssh",          # ssh keys
