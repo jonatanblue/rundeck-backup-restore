@@ -11,14 +11,17 @@ from datetime import datetime
 
 class Keeper:
 
-    def __init__(self, system_directories=None):
-        # Refuse to do anything if RunDeck is running
-        # This is best practice according to the docs:
-        # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
+    def __init__(self, system_directories=None, ignore_running=False):
         if self._rundeck_is_running():
-            logging.error("rundeckd cannot be running while you take a backup"
-                          " or restore from backup")
-            raise Exception("rundeckd is still running")
+            if not ignore_running:
+                # Refuse to do anything if RunDeck is running
+                # This is best practice according to the docs:
+                # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
+                logging.error("rundeckd cannot be running while you take a backup"
+                              " or restore from backup")
+                raise Exception("rundeckd is still running")
+            else:
+                logging.warning("rundeckd is running! Proceeding anyways due to --ignore-running flag")
 
         self.count = 0
         self.bar = None
@@ -105,7 +108,6 @@ class Keeper:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 archive.add(directory)
-                print("")
 
         logging.info("backup complete")
 
@@ -200,7 +202,7 @@ def main(arguments):
         partial = ""
 
     try:
-        keeper = Keeper(system_directories=system_directories)
+        keeper = Keeper(system_directories=system_directories, ignore_running=arguments.ignore_running)
 
         if parser_name == "backup":
             # Set the name of the backup file to be created
@@ -249,6 +251,12 @@ def parse_args(args):
         '--filename',
         type=str,
         help='override the filename used the for backup file')
+    backup_parser.add_argument(
+        '--ignore-running',
+        action='store_true',
+        default=False,
+        help='allow backup/restore even if rundeckd is running'
+    )
 
     # Restore options
     restore_parser = subparsers.add_parser(
