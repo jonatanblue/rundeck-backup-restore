@@ -7,27 +7,29 @@ import sys
 import logging
 import tarfile
 from datetime import datetime
-from progress.bar import Bar
 
 
 class Keeper:
 
-    def __init__(self, system_directories=None, show_progress=False):
-        # Refuse to do anything if RunDeck is running
-        # This is best practice according to the docs:
-        # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
+    def __init__(self, system_directories=None, ignore_running=False):
         if self._rundeck_is_running():
-            logging.error("rundeckd cannot be running while you take a backup"
-                          " or restore from backup")
-            raise Exception("rundeckd is still running")
+            if not ignore_running:
+                # Refuse to do anything if RunDeck is running
+                # This is best practice according to the docs:
+                # http://rundeck.org/2.6.11/administration/backup-and-recovery.html
+                logging.error("rundeckd cannot be running while you take a backup"
+                              " or restore from backup")
+                raise Exception("rundeckd is still running")
+            else:
+                logging.warning("rundeckd is running! Proceeding anyways due to --ignore-running flag")
 
         self.count = 0
         self.bar = None
-        self.show_progress = show_progress
         # Directories to include in backup and restore
         if system_directories is None:
             # Default is to backup and restore all directories
             self.system_directories = [
+                # ToDo: add /etc/rundeck/realm.properties for user auth?
                 "/var/lib/rundeck/data",          # database
                 "/var/lib/rundeck/logs",          # execution logs (biggest)
                 "/var/lib/rundeck/.ssh",          # ssh keys
@@ -53,6 +55,7 @@ class Keeper:
     def _has_duplicate_or_overlap(self, paths):
         """Return true if list of paths has duplicate or overlapping paths"""
         if len(paths) > 1:
+            # TODO: This seems inefficient; see if there's a simpler deduper possible
             first = paths[0]
             remaining = paths[1:]
             for item in remaining:
@@ -74,24 +77,17 @@ class Keeper:
                 universal_newlines=True
             )
         except subprocess.CalledProcessError as error:
-            if "rundeckd is not running" not in error.output:
+            if "rundeckd" not in error.output:
                 raise Exception(
                     "error running service command, "
                     "is rundeckd installed on this machine?"
                 )
             else:
                 status = error.output
-        if "rundeckd is running" in status:
+        if "rundeckd" in status and "running" in status:
             return True
         else:
             return False
-
-    def _track_progress(self, members):
-        """Helps track progress when using progress bar in loop"""
-        for member in members:
-            # Increment progress bar
-            self.bar.next()
-            yield member
 
     def backup(self, destination_path, filename):
         """Create a backup file"""
@@ -100,36 +96,18 @@ class Keeper:
 
         # Fail if backup dir is not found
         if not os.path.exists(destination_path):
-            logging.error("backup directory {} not found".format(
+            logging.debug("backup directory {} not found; creating now".format(
                 destination_path))
-            raise Exception("could not find backup directory")
+            os.makedirs(destination_path)
 
         file_path = os.path.join(destination_path, filename)
         logging.debug("using full backup path {}".format(file_path))
-
-        if self.show_progress:
-            # Count files in all directories
-            logging.info("counting files...")
-            for directory in self.system_directories:
-                for root, dirs, files in os.walk(directory):
-                    for f in files:
-                        self.count += 1
-            logging.debug("total number of files is {}".format(self.count))
-            # Create progress bar
-            self.bar = Bar('Processing', max=self.count)
 
         # Create tar file and save all directories to it
         with tarfile.open(file_path, mode='w:gz', dereference=True) as archive:
             for directory in self.system_directories:
                 logging.info("adding directory {}".format(directory))
                 archive.add(directory)
-                # To get the progress bar on separate line from
-                # log messages when printing log to stdout
-                print("")
-
-        if self.show_progress:
-            # Close progress bar
-            self.bar.finish()
 
         logging.info("backup complete")
 
@@ -175,15 +153,7 @@ class Keeper:
                 ",".join(self.system_directories)
             ))
 
-            if self.show_progress:
-                # Count files in tar file
-                self.count = len(files_to_restore)
-                logging.debug("total number of files is {}".format(self.count))
-                # Create progress bar
-                self.bar = Bar('Processing', max=self.count)
-                restore_members = self._track_progress(files_to_restore)
-            else:
-                restore_members = files_to_restore
+            restore_members = files_to_restore
             logging.debug(
                 "restoring files in {}".format(self.system_directories)
             )
@@ -191,26 +161,15 @@ class Keeper:
                 path="/",
                 members=restore_members
             )
-            if self.show_progress:
-                # Make progress bar play nice with log messages
-                print("")
             logging.info("restore complete: {} files".format(
                 len(files_to_restore)
             ))
-
-        if self.show_progress:
-            # Close progress bar
-            self.bar.finish()
 
 
 def main(arguments):
     # Gather arguments
     parser_name = arguments.subparser_name
     debug_mode = arguments.debug
-    if arguments.no_progress:
-        show_progress = False
-    else:
-        show_progress = True
 
     # Enable debug logging if flag is set
     if debug_mode:
@@ -242,23 +201,25 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    keeper = Keeper(system_directories=system_directories,
-                    show_progress=show_progress)
+    try:
+        keeper = Keeper(system_directories=system_directories, ignore_running=arguments.ignore_running)
 
-    if parser_name == "backup":
-        # Set the name of the backup file to be created
-        if arguments.filename:
-            backup_filename = arguments.filename
-        else:
-            backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
-                datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
-            )
-        keeper.backup(
-            destination_path=arguments.dest,
-            filename=backup_filename)
-    elif parser_name == "restore":
-        keeper.restore(
-            filepath=arguments.file)
+        if parser_name == "backup":
+            # Set the name of the backup file to be created
+            if arguments.filename:
+                backup_filename = arguments.filename
+            else:
+                backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
+                    datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
+                )
+            keeper.backup(
+                destination_path=arguments.dest,
+                filename=backup_filename)
+        elif parser_name == "restore":
+            keeper.restore(
+                filepath=arguments.file)
+    except Exception as e:
+        print(e)
 
 
 def parse_args(args):
@@ -269,10 +230,6 @@ def parse_args(args):
         '-d',
         action='store_true',
         help='enable debug logging')
-    parser.add_argument(
-        '--no-progress',
-        action='store_true',
-        help='disable progress bar')
     parser.add_argument(
         '--dirs',
         type=str,
@@ -294,6 +251,12 @@ def parse_args(args):
         '--filename',
         type=str,
         help='override the filename used the for backup file')
+    backup_parser.add_argument(
+        '--ignore-running',
+        action='store_true',
+        default=False,
+        help='allow backup/restore even if rundeckd is running'
+    )
 
     # Restore options
     restore_parser = subparsers.add_parser(
