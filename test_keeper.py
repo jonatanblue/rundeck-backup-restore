@@ -224,6 +224,85 @@ class TestKeeper(unittest.TestCase):
         # Recursively remove all directories and files used in test
         self._purge_directory(cwd + "/tmp/keeper_test_backup")
 
+    def test_backup_skips_missing_dir(self):
+        """Test that missing directory is skipped"""
+        cwd = os.getcwd()
+        # Set paths
+        file_paths = [
+            cwd + "/tmp/keeper_test_backup/house/room/file1.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/file2.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/file3.txt",
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer/file4",
+            cwd + "/tmp/keeper_test_backup/house/room/locker/file5.txt"
+        ]
+        folder_paths_to_create = [
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer",
+            cwd + "/tmp/keeper_test_backup/house/room/locker"
+        ]
+        directories_to_backup = [
+            cwd + "/tmp/keeper_test_backup/house/room/desk/drawer",
+            cwd + "/tmp/keeper_test_backup/house/room/locker",
+            cwd + "/tmp/keeper_test_backup/ghosthouse"  # this does not exist
+        ]
+        files_expected_in_tar = [
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/keeper_test_backup/house/room/desk/drawer"
+            ),
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/keeper_test_backup/house/room/desk/drawer/file4"
+            ),
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/keeper_test_backup/house/room/locker"
+            ),
+            os.path.join(
+                cwd.strip("/"),
+                "tmp/keeper_test_backup/house/room/locker/file5.txt"
+            )
+        ]
+
+        keeper = Keeper(system_directories=directories_to_backup)
+
+        # Create all directories
+        for path in folder_paths_to_create:
+            self._create_dir(path)
+
+        # Create all files for backup test
+        for path in file_paths:
+            # Create file
+            with open(path, "w") as file_handle:
+                file_handle.write("lorem ipsum\n")
+
+        # Create backup
+        keeper.backup(
+            destination_path=cwd + "/tmp/keeper_test_backup",
+            filename="backup_test.tar.gz"
+        )
+
+        # Get list of all file paths inside tar file
+        files_in_tar = self._list_files_in_tar(
+            cwd + "/tmp/keeper_test_backup/backup_test.tar.gz")
+
+        # tar file can't be empty
+        self.assertNotEqual(len(files_in_tar), 0)
+
+        # Normpath the paths
+        # NOTE: I don't know why this is necessary
+        files_expected_in_tar = [
+            os.path.normpath(p) for p in files_expected_in_tar
+        ]
+        files_in_tar = [
+            os.path.normpath(p) for p in files_in_tar
+        ]
+
+        # Compare tar file and list of files
+        self.assertEqual(set(files_expected_in_tar), set(files_in_tar))
+
+        # Recursively remove all directories and files used in test
+        self._purge_directory(cwd + "/tmp/keeper_test_backup")
+
     def test_restore(self):
         """Test restoring a set of directories and files from a backup file"""
         # Set paths
