@@ -4,7 +4,7 @@
 
 CLI tool for RunDeck backup and restore.
 
-[![CircleCI](https://circleci.com/gh/jonatanblue/rundeck-backup-restore/tree/master.svg?style=shield)](https://circleci.com/gh/jonatanblue/rundeck-backup-restore/tree/master)
+[![CircleCI](https://circleci.com/gh/jonatanblue/rundeck-backup-restore/tree/master.svg?style=svg)](https://circleci.com/gh/jonatanblue/rundeck-backup-restore/tree/master)
 
 **NOTE:** This project is still in beta. Please proceed with caution.
 

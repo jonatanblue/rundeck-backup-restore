@@ -1,0 +1,13 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/jonatanblue/rundeck-backup-restore
+    parallelism: 1
+    shell: /bin/bash --login
+    docker:
+    - image: circleci/python:3-stretch-browsers-legacy
+    steps:
+    # Check out the code
+    - checkout
+    # Run the tests
+    - run: python3 -m unittest discover
