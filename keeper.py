@@ -201,25 +201,29 @@ def main(arguments):
         system_directories = None
         partial = ""
 
-    try:
-        keeper = Keeper(system_directories=system_directories, ignore_running=arguments.ignore_running)
+    # Restore does not have the option to ignore running, so default to False
+    if "ignore_running" in arguments:
+        ignore_running = arguments.ignore_running
+    else:
+        ignore_running = False
+    keeper = Keeper(
+        system_directories=system_directories,
+        ignore_running=ignore_running
+    )
 
-        if parser_name == "backup":
-            # Set the name of the backup file to be created
-            if arguments.filename:
-                backup_filename = arguments.filename
-            else:
-                backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
-                    datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
-                )
-            keeper.backup(
-                destination_path=arguments.dest,
-                filename=backup_filename)
-        elif parser_name == "restore":
-            keeper.restore(
-                filepath=arguments.file)
-    except Exception as e:
-        print(e)
+    if parser_name == "backup":
+        # Set the name of the backup file to be created
+        if arguments.filename:
+            backup_filename = arguments.filename
+        else:
+            backup_filename = "rundeck-backup-" + partial + "{}.tar.gz".format(
+                datetime.now().strftime('%Y-%m-%d--%H-%M-%S')
+            )
+        keeper.backup(
+            destination_path=arguments.dest,
+            filename=backup_filename)
+    elif parser_name == "restore":
+        keeper.restore(filepath=arguments.file)
 
 
 def parse_args(args):
@@ -255,7 +259,7 @@ def parse_args(args):
         '--ignore-running',
         action='store_true',
         default=False,
-        help='allow backup/restore even if rundeckd is running'
+        help='allow backup even if rundeckd is running'
     )
 
     # Restore options

@@ -59,7 +59,7 @@ class TestKeeper(unittest.TestCase):
             "/var/lib/rundeck/var/storage",   # key storage files and metadata
             "/var/rundeck/projects"           # project definitions
         ]
-        Keeper(system_directories=directories, show_progress=False)
+        Keeper(system_directories=directories)
 
     def test_has_overlap(self):
         """Test that overlap check works"""
@@ -110,10 +110,7 @@ class TestKeeper(unittest.TestCase):
             "/this/is/valid/though"
         ]
         with self.assertRaises(Exception):
-            Keeper(
-                system_directories=contains_relative_paths,
-                show_progress=False
-            )
+            Keeper(system_directories=contains_relative_paths)
 
     def test_raises_exception_on_overlapping_dirs(self):
         """Test that exception is raised for overlapping dirs
@@ -128,7 +125,7 @@ class TestKeeper(unittest.TestCase):
         ]
         # Set sails
         with self.assertRaises(Exception):
-            Keeper(system_directories=bad_directories, show_progress=False)
+            Keeper(system_directories=bad_directories)
 
     def test_raises_exception_on_overlapping_dirs_reversed(self):
         """Test that exception is raised for overlapping dirs.
@@ -142,7 +139,7 @@ class TestKeeper(unittest.TestCase):
         ]
         # Set sails
         with self.assertRaises(Exception):
-            Keeper(system_directories=bad_directories, show_progress=False)
+            Keeper(system_directories=bad_directories)
 
     def test_backup(self):
         """Test creating a backup file from a set of directories"""
@@ -182,9 +179,7 @@ class TestKeeper(unittest.TestCase):
             )
         ]
 
-        # Set sails
-        keeper = Keeper(system_directories=directories_to_backup,
-                        show_progress=False)
+        keeper = Keeper(system_directories=directories_to_backup)
 
         # Create all directories
         for path in folder_paths_to_create:
@@ -194,7 +189,7 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         keeper.backup(
@@ -249,9 +244,7 @@ class TestKeeper(unittest.TestCase):
             cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/file5.txt"
         ]
 
-        # Set sails
-        keeper = Keeper(system_directories=directories_to_backup,
-                        show_progress=False)
+        keeper = Keeper(system_directories=directories_to_backup)
 
         # Create all directories
         for path in folder_paths_to_create:
@@ -261,7 +254,7 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         keeper.backup(
@@ -310,9 +303,7 @@ class TestKeeper(unittest.TestCase):
             cwd + "/tmp/keeper_test_r_check/a/b/d/file5.txt"
         )
 
-        # Set sails
-        keeper = Keeper(system_directories=directories_to_backup,
-                        show_progress=False)
+        keeper = Keeper(system_directories=directories_to_backup)
 
         # Create all directories
         for path in folder_paths_to_create:
@@ -322,7 +313,7 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         keeper.backup(
@@ -342,7 +333,7 @@ class TestKeeper(unittest.TestCase):
             content = restored_file.read()
             logging.debug("content " + content)
 
-        self.assertEqual(content, "For Gondor!\n")
+        self.assertEqual(content, "lorem ipsum\n")
 
         # Clean up test files and directories
         self._purge_directory(cwd + "/tmp/keeper_test_r_check")
@@ -372,9 +363,7 @@ class TestKeeper(unittest.TestCase):
             base + "/hotel/lobby/locker/file5.txt"
         ]
 
-        # Set sails
-        keeper = Keeper(system_directories=directories_to_backup,
-                        show_progress=False)
+        keeper = Keeper(system_directories=directories_to_backup)
 
         # Create all directories
         for path in folder_paths_to_create:
@@ -384,7 +373,7 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         keeper.backup(
@@ -445,11 +434,10 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         args = keeper.parse_args([
-            '--no-progress',
             '--dirs=' + cwd + '/tmp/keeper_python_unittest_partial_name/a/b',
             'backup',
             '--dest', 'tmp/keeper_python_unittest_partial_name'
@@ -492,11 +480,10 @@ class TestKeeper(unittest.TestCase):
         for path in file_paths:
             # Create file
             with open(path, "w") as file_handle:
-                file_handle.write("For Gondor!\n")
+                file_handle.write("lorem ipsum\n")
 
         # Create backup
         args = keeper.parse_args([
-            '--no-progress',
             '--dirs=' + base + '/a/b',
             'backup',
             '--dest', base,
@@ -509,7 +496,6 @@ class TestKeeper(unittest.TestCase):
 
         # Restore
         args = keeper.parse_args([
-            '--no-progress',
             '--dirs=' + base + '/a/b/c/e',
             'restore',
             '--file=' + base + '/test.tar.gz'
