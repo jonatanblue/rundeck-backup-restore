@@ -94,7 +94,6 @@ class Keeper:
         # Start message
         logging.debug("starting backup")
 
-        # Fail if backup dir is not found
         if not os.path.exists(destination_path):
             logging.debug("backup directory {} not found; creating now".format(
                 destination_path))
@@ -106,8 +105,13 @@ class Keeper:
         # Create tar file and save all directories to it
         with tarfile.open(file_path, mode='w:gz', dereference=True) as archive:
             for directory in self.system_directories:
-                logging.info("adding directory {}".format(directory))
-                archive.add(directory)
+                if os.path.isdir(directory):
+                    logging.info("adding directory {}".format(directory))
+                    archive.add(directory)
+                else:
+                    logging.warning("skipping missing directory {}".format(
+                        directory
+                    ))
 
         logging.info("backup complete")
 
