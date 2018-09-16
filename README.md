@@ -10,10 +10,6 @@ CLI tool for RunDeck backup and restore.
 
 # How to use
 
-## Install
-
-    pip3 install -r requirements
-
 ## Run
 
 ### Backup
