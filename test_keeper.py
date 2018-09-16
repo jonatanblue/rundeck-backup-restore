@@ -32,6 +32,11 @@ class MockedKeeper(Keeper):
 
 class TestKeeper(unittest.TestCase):
     """Tests for `keeper.py`"""
+
+    def setUp(self):
+        """Set up defaults for all tests"""
+        self.maxDiff = None
+
     def _create_dir(self, path):
         """Creates directory"""
         if not os.path.exists(path):
@@ -214,8 +219,7 @@ class TestKeeper(unittest.TestCase):
         ]
 
         # Compare tar file and list of files
-        self.assertEqual(files_expected_in_tar,
-                         files_in_tar)
+        self.assertEqual(set(files_expected_in_tar), set(files_in_tar))
 
         # Recursively remove all directories and files used in test
         self._purge_directory(cwd + "/tmp/keeper_test_backup")
@@ -240,8 +244,8 @@ class TestKeeper(unittest.TestCase):
             cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/"
         ]
         files_expected_in_restore = [
-            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/f4",
-            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/file5.txt"
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/locker/file5.txt",
+            cwd + "/tmp/keeper_test_restore/hotel/lobby/desk/drawer/f4"
         ]
 
         keeper = Keeper(system_directories=directories_to_backup)
@@ -276,7 +280,7 @@ class TestKeeper(unittest.TestCase):
             for f in files:
                 files_found.append(os.path.join(root, f))
 
-        self.assertEqual(files_found, files_expected_in_restore)
+        self.assertEqual(set(files_found), set(files_expected_in_restore))
 
         # Clean up test files and directories
         self._purge_directory(cwd + "/tmp/keeper_test_restore")
@@ -509,7 +513,7 @@ class TestKeeper(unittest.TestCase):
             for f in files:
                 files_found.append(os.path.join(root, f))
 
-        self.assertEqual(files_found, files_expected_in_restore)
+        self.assertEqual(set(files_found), set(files_expected_in_restore))
 
         # Clean up directory
         self._purge_directory(base)
